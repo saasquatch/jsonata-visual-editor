@@ -99,7 +99,6 @@ export function Editor(props) {
   return (
     <div>
       <div style={{ float: "right" }}>
-        {toggleBlock}
         <ButtonHelp
           onClick={toggleMode}
           disabled={toggleBlock}

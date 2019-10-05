@@ -1,10 +1,9 @@
 import React, { useState } from "react";
 import ReactDOM from "react-dom";
 import jsonata from "jsonata";
+import ButtonHelp from "./ButtonHelp";
 import { Editor } from "./AstEditor";
 import { ErrorBoundary } from "./ErrorBoundary";
-
-// import "./styles.css";
 
 const simpleCondition = `revenue > 30`;
 const expr = jsonata(simpleCondition);
@@ -12,13 +11,8 @@ const defaultAst = expr.ast();
 const introspection = jsonata(`**.steps.value`);
 
 function App() {
-  const [text, setText] = useState(simpleCondition);
   const [ast, setAst] = useState(defaultAst);
 
-  function toAst() {
-    const newAst = jsonata(text).ast();
-    setAst(newAst);
-  }
   const keys = introspection.evaluate(ast);
 
   return (
@@ -35,7 +29,7 @@ function App() {
         <button onClick={toAst}>-></button>
       </div> */}
 
-      <Editor ast={ast} text={text} onChange={setAst} />
+      <Editor ast={ast} text={simpleCondition} onChange={setAst} />
 
       <div style={{ marginTop: "500px" }}>
         <pre>
