@@ -1,11 +1,10 @@
 import React, { useState } from "react";
 import ReactDOM from "react-dom";
 import jsonata from "jsonata";
-import ButtonHelp from "./ButtonHelp";
 import { Editor } from "./AstEditor";
 import { ErrorBoundary } from "./ErrorBoundary";
 
-const simpleCondition = `revenue > 30`;
+const simpleCondition = `a = 1 and b = 2 and c = 3`;
 const expr = jsonata(simpleCondition);
 const defaultAst = expr.ast();
 const introspection = jsonata(`**.steps.value`);

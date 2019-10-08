@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import jsonata from "jsonata";
 import styled from "styled-components";
-import { InputGroup, Form, Col, Button } from "react-bootstrap";
+import { InputGroup, Form, Col, Button, ButtonGroup } from "react-bootstrap";
 import {
   AntDesignOutline,
   DashboardOutline,
@@ -218,25 +218,45 @@ function isValidBasicExpression(newValue) {
   return "Can't use basic editor for advanced expressions. Try a simpler expression.";
 }
 
-function RootNodeEditor(props) {
-  function addRootBinary(type) {
-    props.onChange({
+function newBinaryAdder(type, ast, onChange, nested = false) {
+  return () =>
+    onChange({
       type: "binary",
       value: type,
-      lhs: props.ast,
+      lhs: ast,
       rhs: DefaultNewCondition
     });
-  }
+}
+
+function RootNodeEditor(props) {
   return (
     <div>
       <NodeEditor {...props} />
-      <Button variant="secondary" onClick={() => addRootBinary("and")}>
-        + And
-      </Button>
-      <Button variant="secondary" onClick={() => addRootBinary("or")}>
-        + Or
-      </Button>
+      {isCombinerNode(props.ast) ? (
+        <span />
+      ) : (
+        <ButtonGroup>
+          <Button
+            variant="secondary"
+            onClick={newBinaryAdder("and", props.ast, props.onChange)}
+          >
+            + And
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={newBinaryAdder("or", props.ast, props.onChange)}
+          >
+            + Or
+          </Button>
+        </ButtonGroup>
+      )}
     </div>
+  );
+}
+
+function isCombinerNode(ast) {
+  return (
+    ast.type === "binary" && Object.keys(combinerOperators).includes(ast.value)
   );
 }
 
@@ -328,7 +348,54 @@ function BinaryBaseEditor(props) {
   );
 }
 
+function flattenBinaryNodesThatMatch({ ast, onChange, parentType }) {
+  if (ast.type === "binary" && ast.value === parentType) {
+    // Flatten
+    return [
+      ...flattenBinaryNodesThatMatch({
+        ast: ast.lhs,
+        onChange: newAst => onChange({ ...ast, lhs: newAst }),
+        parentType
+      }),
+      ...flattenBinaryNodesThatMatch({
+        ast: ast.rhs,
+        onChange: newAst => onChange({ ...ast, rhs: newAst }),
+        parentType
+      })
+    ];
+  } else {
+    // Don't flatten
+    return [{ ast, onChange }];
+  }
+}
+
+function buildFlattenedBinaryValueSwap({ ast, parentType, newValue }) {
+  if (ast.type === "binary" && ast.value === parentType) {
+    return {
+      ...ast,
+      lhs: buildFlattenedBinaryValueSwap({
+        ast: ast.lhs,
+        parentType,
+        newValue
+      }),
+      rhs: buildFlattenedBinaryValueSwap({
+        ast: ast.rhs,
+        parentType,
+        newValue
+      }),
+      value: newValue
+    };
+  } else {
+    return ast;
+  }
+}
+
 function CombinerEditor(props) {
+  const flattenedBinaryNodes = flattenBinaryNodesThatMatch({
+    ast: props.ast,
+    onChange: props.onChange,
+    parentType: props.ast.value
+  });
   return (
     <Inset>
       <Form.Row>
@@ -337,7 +404,13 @@ function CombinerEditor(props) {
             as="select"
             value={props.ast.value}
             onChange={e =>
-              props.onChange({ ...props.ast, value: e.target.value })
+              props.onChange(
+                buildFlattenedBinaryValueSwap({
+                  ast: props.ast,
+                  newValue: e.target.value,
+                  parentType: props.ast.value
+                })
+              )
             }
           >
             {Object.keys(combinerOperators).map(k => (
@@ -346,27 +419,34 @@ function CombinerEditor(props) {
               </option>
             ))}
           </Form.Control>
-
-          <div>
-            <Icon
-              type={CloseCircleOutline}
-              onClick={() => props.onChange(props.ast.lhs)}
-            />
-          </div>
         </InputGroup>
         <Col sm="10">
-          <Form.Row>
-            <NodeEditor
-              ast={props.ast.lhs}
-              onChange={newAst => props.onChange({ ...props.ast, lhs: newAst })}
-            />
-          </Form.Row>
-          <Form.Row>
-            <NodeEditor
-              ast={props.ast.rhs}
-              onChange={newAst => props.onChange({ ...props.ast, rhs: newAst })}
-            />
-          </Form.Row>
+          {flattenedBinaryNodes.map((c, idx) => (
+            <Form.Row key={idx}>
+              <NodeEditor ast={c.ast} onChange={c.onChange} />
+            </Form.Row>
+          ))}
+
+          <ButtonGroup aria-label="Basic example">
+            <Button
+              variant="secondary"
+              onClick={newBinaryAdder("and", props.ast, props.onChange)}
+            >
+              + And
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={newBinaryAdder("or", props.ast, props.onChange)}
+            >
+              + Or
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => props.onChange(props.ast.lhs)}
+            >
+              x Remove Last
+            </Button>
+          </ButtonGroup>
         </Col>
       </Form.Row>
     </Inset>
