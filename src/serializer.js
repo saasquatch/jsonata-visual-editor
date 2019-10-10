@@ -43,7 +43,7 @@ export function serializer(node) {
       stages = node.stages.map(serializer).join("");
     }
     let name = node.value;
-    if (/\s/.test(name)) {
+    if (/\s/.test(name) || ["null", "false", "true"].includes(name)) {
       // Escaped for whitespace
       name = "`" + name + "`";
     }
@@ -51,13 +51,25 @@ export function serializer(node) {
   } else if (node.type === "filter") {
     return "[" + serializer(node.expr) + "]";
   } else if (node.type === "value") {
-    return node.value ? "true" : "false";
+    if (node.value === null) return "null";
+    if (node.value === false) return "false";
+    if (node.value === true) return "true";
+    throw Error("Unhandled value node " + node.value);
   } else if (node.type === "block") {
     return "(" + node.expressions.map(serializer).join("; ") + ")";
   } else if (node.type === "path") {
     return node.steps.map(serializer).join(".");
   } else if (node.type === "apply") {
     return node.value;
+  } else if (node.type === "unary") {
+    return (
+      node.value +
+      "\n\t" +
+      node.lhs
+        .map(set => serializer(set[0]) + ":" + serializer(set[1]))
+        .join(",\n\t") +
+      "\n}"
+    );
   }
 
   return "Error: Invalid node type.";

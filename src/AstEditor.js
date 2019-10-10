@@ -1,14 +1,23 @@
 import React, { useState } from "react";
 import jsonata from "jsonata";
 import styled from "styled-components";
-import { InputGroup, Form, Col, Button, ButtonGroup } from "react-bootstrap";
+import {
+  InputGroup,
+  Form,
+  Col,
+  Button,
+  ButtonGroup,
+  OverlayTrigger,
+  Tooltip
+} from "react-bootstrap";
 import {
   AntDesignOutline,
   DashboardOutline,
   FontSizeOutline,
   NumberOutline,
   TableOutline,
-  CloseCircleOutline
+  CloseCircleOutline,
+  CheckSquareOutline
 } from "@ant-design/icons";
 import AntdIcon from "@ant-design/icons-react";
 
@@ -37,15 +46,26 @@ const IDEMode = Symbol("IDEMode");
 // See all the AST types: https://github.com/mtiller/jsonata/blob/ts-2.0/src/parser/ast.ts
 // const NestedPathValue = jsonata(`$join(steps.value,".")`);
 
-const comparionsOperators = {
-  "=": "equals",
+const numberOperators = {
   ">": "greater than",
   "<": "less than",
   "!=": "not equals",
   "<=": "less than or equal",
-  ">=": "greater than or equal",
+  ">=": "greater than or equal"
+};
+const baseOperators = {
+  "=": "equals"
+};
+const arrayOperators = {
   in: "array contains"
 };
+
+const comparionsOperators = {
+  ...baseOperators,
+  ...numberOperators,
+  ...arrayOperators
+};
+
 const combinerOperators = {
   and: "and",
   or: "or"
@@ -62,6 +82,20 @@ const operators = {
   ...mathOperators,
   ...combinerOperators
 };
+
+function NodeEditor(props) {
+  if (props.ast.type === "binary") {
+    return <BinaryEditor {...props} />;
+  } else if (props.ast.type === "path") {
+    return <PathEditor {...props} />;
+  } else if (["number", "value", "string"].includes(props.ast.type)) {
+    return <CoercibleValueEditor {...props} />;
+  } else if (props.ast.type === "block") {
+    return <BlockEditor {...props} />;
+  } else {
+    throw new Error("Unsupported node type: " + props.ast.type);
+  }
+}
 
 export function Editor(props) {
   const [mode, setMode] = useState(
@@ -186,11 +220,8 @@ export function IDEEditor({ ast, onChange, setToggleBlock }) {
     </div>
   );
 }
-
-const DefaultNewCondition = {
-  type: "binary",
-  value: "=",
-  lhs: {
+function defaultPath() {
+  return {
     type: "path",
     steps: [
       {
@@ -198,11 +229,19 @@ const DefaultNewCondition = {
         type: "name"
       }
     ]
-  },
-  rhs: {
+  };
+}
+function defaultNumber() {
+  return {
     value: 0,
     type: "number"
-  }
+  };
+}
+const DefaultNewCondition = {
+  type: "binary",
+  value: "=",
+  lhs: defaultPath(),
+  rhs: defaultNumber()
 };
 
 const NodeWhitelist = jsonata(`
@@ -260,24 +299,6 @@ function isCombinerNode(ast) {
   );
 }
 
-function NodeEditor(props) {
-  if (props.ast.type === "binary") {
-    return <BinaryEditor {...props} />;
-  } else if (props.ast.type === "path") {
-    return <PathEditor {...props} />;
-  } else if (props.ast.type === "number") {
-    return <NumberEditor {...props} />;
-  } else if (props.ast.type === "value") {
-    return <ValueEditor {...props} />;
-  } else if (props.ast.type === "string") {
-    return <StringEditor {...props} />;
-  } else if (props.ast.type === "block") {
-    return <BlockEditor {...props} />;
-  } else {
-    return <AdvancedEditor {...props} />;
-  }
-}
-
 function BinaryEditor(props) {
   if (Object.keys(combinerOperators).includes(props.ast.value)) {
     return <CombinerEditor {...props} />;
@@ -287,14 +308,13 @@ function BinaryEditor(props) {
     return (
       <BinaryBaseEditor
         {...props}
-        operators={comparionsOperators}
         shouldSwap={swapper}
       />
     );
   }
-  if (Object.keys(mathOperators).includes(props.ast.value)) {
-    return <BinaryBaseEditor {...props} operators={mathOperators} />;
-  }
+  // if (Object.keys(mathOperators).includes(props.ast.value)) {
+  //   return <BinaryBaseEditor {...props} operators={mathOperators} />;
+  // }
 }
 
 function BinaryBaseEditor(props) {
@@ -330,12 +350,28 @@ function BinaryBaseEditor(props) {
               }
             }}
           >
-            {Object.keys(props.operators).map(k => (
+            <optgroup label="Common Operators">
+            {Object.keys(baseOperators).map(k => (
               <option key={k} value={k}>
-                {props.operators[k]}
+                {baseOperators[k]}
               </option>
             ))}
-          </Form.Control>
+            </optgroup>
+            <optgroup label="Number Operators">
+            {Object.keys(numberOperators).map(k => (
+              <option key={k} value={k}>
+                {numberOperators[k]}
+              </option>
+            ))}
+            </optgroup>
+            <optgroup label="Array Operators">
+            {Object.keys(arrayOperators).map(k => (
+              <option key={k} value={k}>
+                {arrayOperators[k]}
+              </option>
+            ))}
+            </optgroup>
+                      </Form.Control>
         </InputGroup>
         <NodeEditor
           ast={props.ast[rightKey]}
@@ -421,8 +457,8 @@ function CombinerEditor(props) {
           </Form.Control>
         </InputGroup>
         <Col sm="10">
-          {flattenedBinaryNodes.map((c, idx) => (
-            <Form.Row key={idx}>
+          {flattenedBinaryNodes.map(c => (
+            <Form.Row>
               <NodeEditor ast={c.ast} onChange={c.onChange} />
             </Form.Row>
           ))}
@@ -430,15 +466,13 @@ function CombinerEditor(props) {
           <ButtonGroup aria-label="Basic example">
             <Button
               variant="secondary"
-              onClick={newBinaryAdder("and", props.ast, props.onChange)}
+              onClick={newBinaryAdder(
+                props.ast.value,
+                props.ast,
+                props.onChange
+              )}
             >
-              + And
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={newBinaryAdder("or", props.ast, props.onChange)}
-            >
-              + Or
+              Add
             </Button>
             <Button
               variant="secondary"
@@ -471,11 +505,7 @@ function PathEditor({ ast, onChange }) {
         onChange={textChange}
         isInvalid={parsing.error}
       />
-      <InputGroup.Prepend>
-        <InputGroup.Text>
-          <Icon type={TableOutline} />
-        </InputGroup.Text>
-      </InputGroup.Prepend>
+      <TypeSwitch ast={ast} onChange={onChange} />
       <Form.Control.Feedback type="invalid">
         {parsing.error}
       </Form.Control.Feedback>
@@ -483,71 +513,119 @@ function PathEditor({ ast, onChange }) {
   );
 }
 
-function AdvancedEditor({ ast, text, onChange }) {
-  return <div>{JSON.stringify(ast)}</div>;
+const IconMap = {
+  number: NumberOutline,
+  string: FontSizeOutline,
+  path: TableOutline,
+  value: CheckSquareOutline
+};
+
+const DescriptionMap = {
+  number: "We'll compare this as a number. Click to change.",
+  string: "We'll compare this as a string. Click to change.",
+  path: "We'll use this as a variable name. Click to change.",
+  value: " We'll compare this as a boolean. Click to change."
+};
+
+function nextAst(ast) {
+  if (ast.type !== "path") {
+    if (isNaN(ast.value)) {
+      return jsonata(ast.value).ast();
+    } else {
+      // Numbers aren't valid paths, so we can't just switch to them
+      return defaultPath();
+    }
+  } else if (ast.type === "path") {
+    return { type: "string", value: serializer(ast) };
+  }
 }
 
-function NumberEditor({ ast, onChange }) {
+function isNumber(str) {
+  if (typeof str !== "string") return false; // we only process strings!
+  // could also coerce to string: str = ""+str
+  return !isNaN(str) && !isNaN(parseFloat(str));
+}
+
+function autoCoerce({ ast, newValue }) {
+  const cleanVal = newValue.trim().toLowerCase();
+  if (isNumber(newValue)) {
+    return {
+      type: "number",
+      value: parseFloat(newValue)
+    };
+  } else if (["true", "false", "null"].includes(cleanVal)) {
+    let value;
+    if (cleanVal === "true") {
+      value = true;
+    } else if (cleanVal === "false") {
+      value = false;
+    } else if (cleanVal === "null") {
+      value = null;
+    } else {
+      console.error("Invalid value node" + newValue);
+      throw new Error("Unhandle value node" + newValue);
+    }
+    return {
+      type: "value",
+      value: value
+    };
+  } else {
+    return {
+      type: "string",
+      value: newValue
+    };
+  }
+}
+
+function toEditableText(ast) {
+  if (ast.type === "string") return ast.value;
+  if (ast.type === "number") return ast.value.toString();
+  if (ast.type === "value") {
+    if (ast.value === null) return "null";
+    if (ast.value === false) return "false";
+    if (ast.value === true) return "true";
+  }
+}
+
+function TypeSwitch({ ast, onChange }) {
   return (
-    <InputGroup as={Col} sm="5">
-      <Form.Control
-        type="number"
-        placeholder="Enter a number"
-        value={ast.value}
-        onChange={e => onChange({ ...ast, value: e.target.value })}
-      />
+    <OverlayTrigger
+      trigger="hover"
+      placement="top"
+      overlay={<Tooltip>{DescriptionMap[ast.type]}</Tooltip>}
+    >
       <InputGroup.Prepend>
-        <InputGroup.Text>
-          {" "}
-          <Icon type={NumberOutline} />
+        <InputGroup.Text onClick={() => onChange(nextAst(ast))}>
+          <Icon type={IconMap[ast.type]} />
         </InputGroup.Text>
       </InputGroup.Prepend>
-      <Form.Control.Feedback type="invalid">
-        Please enter a number
-      </Form.Control.Feedback>
-    </InputGroup>
+    </OverlayTrigger>
   );
 }
 
-function StringEditor({ ast, onChange }) {
+function CoercibleValueEditor({ ast, onChange }) {
   return (
     <InputGroup as={Col} sm="5">
       <Form.Control
         type="text"
-        placeholder="Enter some text"
-        value={ast.value}
-        onChange={e => onChange({ ...ast, value: e.target.value })}
+        placeholder="Enter a value"
+        value={toEditableText(ast)}
+        onChange={e => onChange(autoCoerce({ ast, newValue: e.target.value }))}
       />
-      <InputGroup.Prepend>
-        <InputGroup.Text>
-          <Icon type={FontSizeOutline} />
-        </InputGroup.Text>
-      </InputGroup.Prepend>
+      <TypeSwitch ast={ast} onChange={onChange} />
 
       <Form.Control.Feedback type="invalid">
-        Please enter some text
+        Please enter a valid value
       </Form.Control.Feedback>
     </InputGroup>
   );
-}
-
-function ValueEditor({ ast }) {
-  if (typeof ast.value === "boolean") {
-    return (
-      <span>
-        <input type="checkbox" checked={ast.value} />
-        Is True
-      </span>
-    );
-  }
-  return <input type="text" value={ast.value} />;
 }
 
 function BlockEditor({ ast }) {
   return (
     <Inset>
-      {ast.expressions.map((exp, idx) => (
-        <NodeEditor ast={exp} key={idx} />
+      {ast.expressions.map(exp => (
+        <NodeEditor ast={exp} />
       ))}
     </Inset>
   );

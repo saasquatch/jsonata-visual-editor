@@ -4,10 +4,10 @@ import jsonata from "jsonata";
 import { Editor } from "./AstEditor";
 import { ErrorBoundary } from "./ErrorBoundary";
 
-const simpleCondition = `a = 1 and b = 2 and c = 3`;
+const simpleCondition = `a = "one" or b = "two"`;
 const expr = jsonata(simpleCondition);
 const defaultAst = expr.ast();
-const introspection = jsonata(`**.steps.value`);
+const introspection = jsonata(`**[type="name"].value`);
 
 function App() {
   const [ast, setAst] = useState(defaultAst);
@@ -32,7 +32,7 @@ function App() {
 
       <div style={{ marginTop: "500px" }}>
         <pre>
-          Keys used: {keys} <br />
+          Keys used: {JSON.stringify(keys, null, 2)} {typeof keys} <br />
           {JSON.stringify(ast, null, 2)}
         </pre>
       </div>
