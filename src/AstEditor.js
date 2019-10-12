@@ -21,6 +21,7 @@ import {
 } from "@ant-design/icons";
 import AntdIcon from "@ant-design/icons-react";
 
+import PathPicker from "./PathEditor";
 import ButtonHelp from "./ButtonHelp";
 import { serializer } from "./serializer";
 
@@ -305,12 +306,7 @@ function BinaryEditor(props) {
   }
   if (Object.keys(comparionsOperators).includes(props.ast.value)) {
     const swapper = ({ ast }) => ast.value === "in";
-    return (
-      <BinaryBaseEditor
-        {...props}
-        shouldSwap={swapper}
-      />
-    );
+    return <BinaryBaseEditor {...props} shouldSwap={swapper} />;
   }
   // if (Object.keys(mathOperators).includes(props.ast.value)) {
   //   return <BinaryBaseEditor {...props} operators={mathOperators} />;
@@ -351,27 +347,27 @@ function BinaryBaseEditor(props) {
             }}
           >
             <optgroup label="Common Operators">
-            {Object.keys(baseOperators).map(k => (
-              <option key={k} value={k}>
-                {baseOperators[k]}
-              </option>
-            ))}
+              {Object.keys(baseOperators).map(k => (
+                <option key={k} value={k}>
+                  {baseOperators[k]}
+                </option>
+              ))}
             </optgroup>
             <optgroup label="Number Operators">
-            {Object.keys(numberOperators).map(k => (
-              <option key={k} value={k}>
-                {numberOperators[k]}
-              </option>
-            ))}
+              {Object.keys(numberOperators).map(k => (
+                <option key={k} value={k}>
+                  {numberOperators[k]}
+                </option>
+              ))}
             </optgroup>
             <optgroup label="Array Operators">
-            {Object.keys(arrayOperators).map(k => (
-              <option key={k} value={k}>
-                {arrayOperators[k]}
-              </option>
-            ))}
+              {Object.keys(arrayOperators).map(k => (
+                <option key={k} value={k}>
+                  {arrayOperators[k]}
+                </option>
+              ))}
             </optgroup>
-                      </Form.Control>
+          </Form.Control>
         </InputGroup>
         <NodeEditor
           ast={props.ast[rightKey]}
@@ -488,26 +484,20 @@ function CombinerEditor(props) {
 }
 
 function PathEditor({ ast, onChange }) {
-  async function validator(ast) {
-    if (ast.type !== "path") {
-      throw new Error("Only paths are supported");
-    }
-    return true;
-  }
-  const [text, textChange, parsing] = useIDEHook({ ast, onChange, validator });
+  // async function validator(ast) {
+  //   if (ast.type !== "path") {
+  //     throw new Error("Only paths are supported");
+  //   }
+  //   return true;
+  // }
+  // const [text, textChange, parsing] = useIDEHook({ ast, onChange, validator });
 
   return (
     <InputGroup as={Col} sm="5">
-      <Form.Control
-        type="text"
-        placeholder="Enter some a path"
-        value={text}
-        onChange={textChange}
-        isInvalid={parsing.error}
-      />
+      <PathPicker value={ast} onChange={ option => onChange(option.value)} />
       <TypeSwitch ast={ast} onChange={onChange} />
       <Form.Control.Feedback type="invalid">
-        {parsing.error}
+        {/* {parsing.error} */}
       </Form.Control.Feedback>
     </InputGroup>
   );
