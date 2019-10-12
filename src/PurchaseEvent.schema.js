@@ -72,90 +72,85 @@ export default {
       title: "Products",
       maxItems: 200,
       items: {
-        $ref: "#/definitions/product"
+        type: "object",
+        properties: {
+          product_id: {
+            type: "string",
+            title: "Product ID",
+            description: "Database id of the product being viewed",
+            maxLength: 375
+          },
+          sku: {
+            type: "string",
+            title: "Stock Keeping Unit",
+            description: "Sku of the product being viewed",
+            maxLength: 375
+          },
+          category: {
+            type: "string",
+            title: "Product Category",
+            description: "Product category being viewed",
+            maxLength: 375
+          },
+          name: {
+            type: "string",
+            title: "Product Name",
+            description: "Name of the product being viewed",
+            maxLength: 375
+          },
+          brand: {
+            type: "string",
+            title: "Brand",
+            description: "Brand associated with the product",
+            maxLength: 375
+          },
+          variant: {
+            type: "string",
+            title: "Product Variant",
+            description: "Variant of the product (e.g. Black)",
+            maxLength: 375
+          },
+          price: {
+            type: "number",
+            title: "Price",
+            description: "Price of the product being viewed",
+            minimum: 0
+          },
+          quantity: {
+            type: "integer",
+            title: "Quantity",
+            description: "Quantity of a product",
+            minimum: 0
+          },
+          coupon: {
+            type: "string",
+            title: "Coupon",
+            description:
+              "Coupon code associated with a product (e.g MAY_DEALS_3)",
+            maxLength: 375
+          },
+          position: {
+            type: "integer",
+            title: "Product Position",
+            description: "Position in the product list (ex. 3)"
+          },
+          url: {
+            type: "string",
+            title: "Product URL",
+            description: "URL of the product page",
+            maxLength: 375
+          },
+          image_url: {
+            type: "string",
+            title: "Image URL",
+            description: "Image url of the product",
+            maxLength: 375
+          }
+        },
+        required: ["product_id"],
+        additionalProperties: false
       }
     }
   },
-  additionalProperties: false,
-  definitions: {
-    product: {
-      type: "object",
-      properties: {
-        product_id: {
-          type: "string",
-          title: "Product ID",
-          description: "Database id of the product being viewed",
-          maxLength: 375
-        },
-        sku: {
-          type: "string",
-          title: "Stock Keeping Unit",
-          description: "Sku of the product being viewed",
-          maxLength: 375
-        },
-        category: {
-          type: "string",
-          title: "Product Category",
-          description: "Product category being viewed",
-          maxLength: 375
-        },
-        name: {
-          type: "string",
-          title: "Product Name",
-          description: "Name of the product being viewed",
-          maxLength: 375
-        },
-        brand: {
-          type: "string",
-          title: "Brand",
-          description: "Brand associated with the product",
-          maxLength: 375
-        },
-        variant: {
-          type: "string",
-          title: "Product Variant",
-          description: "Variant of the product (e.g. Black)",
-          maxLength: 375
-        },
-        price: {
-          type: "number",
-          title: "Price",
-          description: "Price of the product being viewed",
-          minimum: 0
-        },
-        quantity: {
-          type: "integer",
-          title: "Quantity",
-          description: "Quantity of a product",
-          minimum: 0
-        },
-        coupon: {
-          type: "string",
-          title: "Coupon",
-          description:
-            "Coupon code associated with a product (e.g MAY_DEALS_3)",
-          maxLength: 375
-        },
-        position: {
-          type: "integer",
-          title: "Product Position",
-          description: "Position in the product list (ex. 3)"
-        },
-        url: {
-          type: "string",
-          title: "Product URL",
-          description: "URL of the product page",
-          maxLength: 375
-        },
-        image_url: {
-          type: "string",
-          title: "Image URL",
-          description: "Image url of the product",
-          maxLength: 375
-        }
-      },
-      required: ["product_id"],
-      additionalProperties: false
-    }
-  }
+  additionalProperties: false
 };

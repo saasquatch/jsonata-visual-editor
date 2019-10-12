@@ -19,4 +19,14 @@ Feature: Binary Flattening
       | b |
       | c |
 
-
+  Scenario: Switching and/or changes all the nodes
+    Given an expression
+      """
+      a and b and c
+      """
+    When the basic editor renders
+    And I change the type from "and" to "or"
+    Then the output expression should backend
+      """
+      a or b or c
+      """

@@ -33,10 +33,12 @@ export function serializer(node) {
     return "$" + node.value + predicate;
   } else if (node.type === "wildcard") {
     return node.value;
+  } else if (node.type === "descendant") {
+    return node.value;
   } else if (node.type === "number") {
     return node.value;
   } else if (node.type === "string") {
-    return `"` + node.value + `"`;
+    return JSON.stringify(node.value);
   } else if (node.type === "name") {
     let stages = "";
     if (node.stages) {

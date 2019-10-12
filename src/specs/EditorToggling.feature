@@ -14,7 +14,7 @@ Feature: Toggling between Basic and advanced
   Scenario: Can't switch on errors
     Given the expression is invalid JSONata
     """
-    nd 111 -9=-9
+    error nd 111 -9=-9
     """
     Then [Switch to Basic] is disabled
 
