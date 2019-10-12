@@ -47,15 +47,46 @@ const IDEMode = Symbol("IDEMode");
 // See all the AST types: https://github.com/mtiller/jsonata/blob/ts-2.0/src/parser/ast.ts
 // const NestedPathValue = jsonata(`$join(steps.value,".")`);
 
+const isNumberNode = n => n.type === "number";
+const isPathNode = n => n.type === "path";
+
+function Validators(schemaProvider) {
+  return {
+    onlyNumberValidator(ast) {
+      let error;
+      if (isPathNode(ast)) {
+        const pathType =
+          schemaProvider && schemaProvider.getTypeAtPath(serializer(ast));
+        if (!pathType) {
+          error = null;
+        } else if (["integer", "number", "float"].includes(pathType)) {
+          error = null;
+        } else {
+          error = {
+            error: "non-number-schema",
+            message: "Use a variable that is a number"
+          };
+        }
+      } else if (!isNumberNode(ast)) {
+        error = {
+          error: "non-number",
+          message: "Use a number"
+        };
+      }
+      return error;
+    }
+  };
+}
+
 const numberOperators = {
   ">": "greater than",
   "<": "less than",
-  "!=": "not equals",
   "<=": "less than or equal",
   ">=": "greater than or equal"
 };
 const baseOperators = {
-  "=": "equals"
+  "=": "equals",
+  "!=": "not equals"
 };
 const arrayOperators = {
   in: "array contains"
@@ -317,6 +348,9 @@ function BinaryBaseEditor(props) {
   const swap = props.shouldSwap && props.shouldSwap(props);
   const leftKey = !swap ? "lhs" : "rhs";
   const rightKey = !swap ? "rhs" : "lhs";
+  const validator = numberOperators.includes(props.ast.value)
+    ? Validators(props.schemaProvider).onlyNumberValidator
+    : null;
   return (
     <div>
       <Form.Row>
@@ -325,6 +359,7 @@ function BinaryBaseEditor(props) {
           onChange={newAst =>
             props.onChange({ ...props.ast, [leftKey]: newAst })
           }
+          validator={validator}
         />
         <InputGroup as={Col} sm="2">
           <Form.Control
@@ -374,6 +409,7 @@ function BinaryBaseEditor(props) {
           onChange={newAst =>
             props.onChange({ ...props.ast, [rightKey]: newAst })
           }
+          validator={validator}
         />
       </Form.Row>
     </div>
@@ -483,7 +519,7 @@ function CombinerEditor(props) {
   );
 }
 
-function PathEditor({ ast, onChange }) {
+function PathEditor({ ast, onChange, validator }) {
   // async function validator(ast) {
   //   if (ast.type !== "path") {
   //     throw new Error("Only paths are supported");
@@ -491,10 +527,9 @@ function PathEditor({ ast, onChange }) {
   //   return true;
   // }
   // const [text, textChange, parsing] = useIDEHook({ ast, onChange, validator });
-
   return (
     <InputGroup as={Col} sm="5">
-      <PathPicker value={ast} onChange={ option => onChange(option.value)} />
+      <PathPicker value={ast} onChange={option => onChange(option.value)} />
       <TypeSwitch ast={ast} onChange={onChange} />
       <Form.Control.Feedback type="invalid">
         {/* {parsing.error} */}
@@ -593,19 +628,22 @@ function TypeSwitch({ ast, onChange }) {
   );
 }
 
-function CoercibleValueEditor({ ast, onChange }) {
+function CoercibleValueEditor({ ast, onChange, validator }) {
+  let error = validator(ast);
+
   return (
     <InputGroup as={Col} sm="5">
       <Form.Control
         type="text"
         placeholder="Enter a value"
+        isInvalid={error}
         value={toEditableText(ast)}
         onChange={e => onChange(autoCoerce({ ast, newValue: e.target.value }))}
       />
       <TypeSwitch ast={ast} onChange={onChange} />
 
       <Form.Control.Feedback type="invalid">
-        Please enter a valid value
+        {error.message}
       </Form.Control.Feedback>
     </InputGroup>
   );
