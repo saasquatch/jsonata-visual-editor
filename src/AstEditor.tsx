@@ -24,6 +24,10 @@ import AntdIcon from "@ant-design/icons-react";
 import PathPicker from "./PathEditor";
 import ButtonHelp from "./ButtonHelp";
 import { serializer } from "./serializer";
+import { JsonataASTNode } from "./jsonata";
+
+type AST = JsonataASTNode;
+type OnChange = (ast: AST) => void;
 
 AntdIcon.add(
   AntDesignOutline,
@@ -47,8 +51,19 @@ const IDEMode = Symbol("IDEMode");
 // See all the AST types: https://github.com/mtiller/jsonata/blob/ts-2.0/src/parser/ast.ts
 // const NestedPathValue = jsonata(`$join(steps.value,".")`);
 
-const isNumberNode = n => n.type === "number";
-const isPathNode = n => n.type === "path";
+interface NodeEditorProps {
+  ast: AST;
+  onChange: OnChange;
+  validator?: (
+    ast: AST
+  ) => {
+    error: string;
+    message: string;
+  };
+}
+
+const isNumberNode = (n: AST) => n.type === "number";
+const isPathNode = (n: AST) => n.type === "path";
 
 function Validators(schemaProvider) {
   return {
@@ -115,7 +130,7 @@ const operators = {
   ...combinerOperators
 };
 
-function NodeEditor(props) {
+function NodeEditor(props: NodeEditorProps) {
   if (props.ast.type === "binary") {
     return <BinaryEditor {...props} />;
   } else if (props.ast.type === "path") {
@@ -128,9 +143,10 @@ function NodeEditor(props) {
     throw new Error("Unsupported node type: " + props.ast.type);
   }
 }
+type Mode = Symbol;
 
-export function Editor(props) {
-  const [mode, setMode] = useState(
+export function Editor(props: NodeEditorProps) {
+  const [mode, setMode] = useState<Mode>(
     // props.ast.type === "binary" ? NodeMode : IDEMode
     IDEMode
   );
@@ -189,12 +205,24 @@ export function Editor(props) {
   );
 }
 
-function useIDEHook({ ast, onChange, validator, setError }) {
-  const [text, setText] = useState(serializer(ast));
-  const [parsing, setParsing] = useState({ inProgress: false, error: "" });
+type IDEHookProps = {
+  ast: AST;
+  onChange: OnChange;
+  validator: (ast: AST) => Promise<boolean>;
+  setError: (error: any) => void;
+};
+interface ParsingState {
+  inProgress: boolean;
+  error?: string;
+}
+function useIDEHook({ ast, onChange, validator, setError }: IDEHookProps) {
+  const [text, setText] = useState<string>(serializer(ast));
+  const [parsing, setParsing] = useState<ParsingState>({
+    inProgress: false,
+    error: ""
+  });
 
-  function textChange(e) {
-    const newText = e.target.value;
+  function textChange(newText: string) {
     setText(newText);
     setParsing({
       inProgress: true,
@@ -202,7 +230,7 @@ function useIDEHook({ ast, onChange, validator, setError }) {
     });
     setImmediate(async () => {
       let newAst;
-      let error = null;
+      let error = undefined;
       try {
         newAst = jsonata(newText).ast();
         if (validator) {
@@ -228,7 +256,7 @@ function useIDEHook({ ast, onChange, validator, setError }) {
   return [text, textChange, parsing];
 }
 
-export function IDEEditor({ ast, onChange, setToggleBlock }) {
+export function IDEEditor({ ast, onChange, setToggleBlock }: NodeEditorProps) {
   const [text, textChange, parsing] = useIDEHook({
     ast,
     onChange: newValue => {
@@ -280,7 +308,7 @@ const NodeWhitelist = jsonata(`
   type = "binary"
   or (type ="block" and type.expressions[type!="binary"].$length = 0)
 `);
-function isValidBasicExpression(newValue) {
+function isValidBasicExpression(newValue: AST) {
   try {
     if (NodeWhitelist.evaluate(newValue)) {
       return null;
@@ -299,7 +327,7 @@ function newBinaryAdder(type, ast, onChange, nested = false) {
     });
 }
 
-function RootNodeEditor(props) {
+function RootNodeEditor(props: NodeEditorProps) {
   return (
     <div>
       <NodeEditor {...props} />
@@ -325,13 +353,13 @@ function RootNodeEditor(props) {
   );
 }
 
-function isCombinerNode(ast) {
+function isCombinerNode(ast: AST) {
   return (
     ast.type === "binary" && Object.keys(combinerOperators).includes(ast.value)
   );
 }
 
-function BinaryEditor(props) {
+function BinaryEditor(props: NodeEditorProps) {
   if (Object.keys(combinerOperators).includes(props.ast.value)) {
     return <CombinerEditor {...props} />;
   }
@@ -344,11 +372,11 @@ function BinaryEditor(props) {
   // }
 }
 
-function BinaryBaseEditor(props) {
+function BinaryBaseEditor(props: NodeEditorProps) {
   const swap = props.shouldSwap && props.shouldSwap(props);
   const leftKey = !swap ? "lhs" : "rhs";
   const rightKey = !swap ? "rhs" : "lhs";
-  const validator = numberOperators.includes(props.ast.value)
+  const validator = Object.keys(numberOperators).includes(props.ast.value)
     ? Validators(props.schemaProvider).onlyNumberValidator
     : null;
   return (
@@ -366,6 +394,7 @@ function BinaryBaseEditor(props) {
             as="select"
             value={props.ast.value}
             onChange={e => {
+              // @ts-ignore
               const newValue = { ...props.ast, value: e.target.value };
               const swap = ast => {
                 return { ...ast, lhs: ast.rhs, rhs: ast.lhs };
@@ -458,7 +487,10 @@ function buildFlattenedBinaryValueSwap({ ast, parentType, newValue }) {
   }
 }
 
-function CombinerEditor(props) {
+type CombinerProps = NodeEditorProps & {
+  ast: BinaryNode;
+};
+function CombinerEditor(props: CombinerProps) {
   const flattenedBinaryNodes = flattenBinaryNodesThatMatch({
     ast: props.ast,
     onChange: props.onChange,
@@ -475,6 +507,7 @@ function CombinerEditor(props) {
               props.onChange(
                 buildFlattenedBinaryValueSwap({
                   ast: props.ast,
+                  // @ts-ignore
                   newValue: e.target.value,
                   parentType: props.ast.value
                 })
@@ -519,7 +552,7 @@ function CombinerEditor(props) {
   );
 }
 
-function PathEditor({ ast, onChange, validator }) {
+function PathEditor({ ast, onChange, validator }: NodeEditorProps) {
   // async function validator(ast) {
   //   if (ast.type !== "path") {
   //     throw new Error("Only paths are supported");
@@ -552,9 +585,11 @@ const DescriptionMap = {
   value: " We'll compare this as a boolean. Click to change."
 };
 
-function nextAst(ast) {
+function nextAst(ast: AST) {
   if (ast.type !== "path") {
-    if (isNaN(ast.value)) {
+    // @ts-ignore
+    if (ast.value && !isNaN(ast.value)) {
+      // TODO:
       return jsonata(ast.value).ast();
     } else {
       // Numbers aren't valid paths, so we can't just switch to them
@@ -565,13 +600,14 @@ function nextAst(ast) {
   }
 }
 
-function isNumber(str) {
+function isNumber(str: string) {
   if (typeof str !== "string") return false; // we only process strings!
   // could also coerce to string: str = ""+str
+  // @ts-ignore -- expect error
   return !isNaN(str) && !isNaN(parseFloat(str));
 }
 
-function autoCoerce({ ast, newValue }) {
+function autoCoerce({ ast, newValue }: { ast: AST; newValue: string }) {
   const cleanVal = newValue.trim().toLowerCase();
   if (isNumber(newValue)) {
     return {
@@ -602,7 +638,7 @@ function autoCoerce({ ast, newValue }) {
   }
 }
 
-function toEditableText(ast) {
+function toEditableText(ast: AST) {
   if (ast.type === "string") return ast.value;
   if (ast.type === "number") return ast.value.toString();
   if (ast.type === "value") {
@@ -612,7 +648,7 @@ function toEditableText(ast) {
   }
 }
 
-function TypeSwitch({ ast, onChange }) {
+function TypeSwitch({ ast, onChange }: NodeEditorProps) {
   return (
     <OverlayTrigger
       trigger="hover"
@@ -628,28 +664,27 @@ function TypeSwitch({ ast, onChange }) {
   );
 }
 
-function CoercibleValueEditor({ ast, onChange, validator }) {
-  let error = validator(ast);
+function CoercibleValueEditor({ ast, onChange, validator }: NodeEditorProps) {
+  // let error = validator && validator(ast);
 
   return (
     <InputGroup as={Col} sm="5">
       <Form.Control
         type="text"
         placeholder="Enter a value"
-        isInvalid={error}
         value={toEditableText(ast)}
         onChange={e => onChange(autoCoerce({ ast, newValue: e.target.value }))}
       />
       <TypeSwitch ast={ast} onChange={onChange} />
 
       <Form.Control.Feedback type="invalid">
-        {error.message}
+        {/* {error.message} */}
       </Form.Control.Feedback>
     </InputGroup>
   );
 }
 
-function BlockEditor({ ast }) {
+function BlockEditor({ ast }: NodeEditorProps) {
   return (
     <Inset>
       {ast.expressions.map(exp => (

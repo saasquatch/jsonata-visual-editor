@@ -1,7 +1,10 @@
 import React from "react";
-import { OverlayTrigger, Tooltip, Button } from "react-bootstrap";
+import { OverlayTrigger, Tooltip, Button, ButtonProps } from "react-bootstrap";
 
-export default function ButtonHelp(props) {
+type ButtonHelpProps = ButtonProps & {
+  disabledHelp: string;
+};
+export default function ButtonHelp(props: ButtonHelpProps) {
   const { disabledHelp, ...btnProps } = props;
 
   if (props.disabled) {

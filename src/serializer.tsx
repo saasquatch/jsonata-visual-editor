@@ -1,4 +1,8 @@
-export function serializer(node) {
+import { JsonataASTNode } from "./jsonata";
+
+type AST = JsonataASTNode;
+
+export function serializer(node: AST): string {
   if (node.type === "binary") {
     return serializer(node.lhs) + " " + node.value + " " + serializer(node.rhs);
   } else if (node.type === "function") {
@@ -36,7 +40,7 @@ export function serializer(node) {
   } else if (node.type === "descendant") {
     return node.value;
   } else if (node.type === "number") {
-    return node.value;
+    return JSON.stringify(node.value);
   } else if (node.type === "string") {
     return JSON.stringify(node.value);
   } else if (node.type === "name") {
