@@ -2,6 +2,7 @@ import React, { useState } from "react";
 
 import AsyncCreatableSelect from "react-select/async-creatable";
 import { OptionsType, OptionProps } from "react-select/src/types";
+import { components as defaultComponents } from "react-select";
 
 import jsonata from "jsonata";
 import { JsonataASTNode } from "./jsonata";
@@ -16,19 +17,9 @@ type Option = {
   data?: PathSuggestion;
 };
 
-const CustomOption = ({
-  innerRef,
-  data,
-  label,
-  isSelected,
-  onClick,
-  value
-}: OptionProps) => (
-  <div ref={innerRef} onClick={onClick}>
-    {label && label}
-    <code>{data && data.path}</code>
-    <small>{data && data.description}</small>
-  </div>
+type CustomOptionProps = OptionProps<Option>;
+const CustomOption = (props: CustomOptionProps) => (
+  <defaultComponents.Option {...props} />
 );
 
 const PurchasePaths = getPaths(PurchaseEvent);
@@ -38,7 +29,7 @@ function Reducer(acc: OptionsType<Option>[], p: PathSuggestion) {
   return [
     ...acc,
     {
-      label: p.title,
+      label: p.title + " " + p.path,
       value: jsonata(p.path).ast(),
       data: p
     },
@@ -47,10 +38,6 @@ function Reducer(acc: OptionsType<Option>[], p: PathSuggestion) {
 }
 
 const colourOptions = PurchasePaths.reduce(Reducer, []);
-// [
-//   { label: "Red Color", value: jsonata("red").ast() },
-//   { label: "Blue Color", value: jsonata("blue").ast() }
-// ];
 
 const exactMatch = (inputValue: string) => {
   return colourOptions.find((i: Option) => i.label === inputValue);
