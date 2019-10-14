@@ -1,5 +1,15 @@
-function getPaths(schema) {
-  let paths = [];
+// TODO: type for json schemas -- would be good to have all draft versions. Maybe use quicktype?
+type JsonSchema = any;
+
+export type Path = {
+  path: string;
+  title?: string;
+  description?: string;
+  subPaths?: Path[];
+};
+
+function getPaths(schema: JsonSchema): Path[] {
+  let paths: Path[] = [];
   if (schema.anyOf) {
     paths = [...paths, schema.anyOf.map(getPaths)];
   } else if (schema.oneOf) {

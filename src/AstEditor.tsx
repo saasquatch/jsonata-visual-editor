@@ -552,6 +552,13 @@ function CombinerEditor(props: CombinerProps) {
   );
 }
 
+
+const GrowDiv = styled.div`
+  flex-basis: auto;
+  flex-grow: 1;
+  flex-shrink: 1;
+`;
+
 function PathEditor({ ast, onChange, validator }: NodeEditorProps) {
   // async function validator(ast) {
   //   if (ast.type !== "path") {
@@ -562,7 +569,9 @@ function PathEditor({ ast, onChange, validator }: NodeEditorProps) {
   // const [text, textChange, parsing] = useIDEHook({ ast, onChange, validator });
   return (
     <InputGroup as={Col} sm="5">
-      <PathPicker value={ast} onChange={option => onChange(option.value)} />
+          <GrowDiv>
+<PathPicker value={ast} onChange={option => onChange(option.value)} />
+      </GrowDiv>
       <TypeSwitch ast={ast} onChange={onChange} />
       <Form.Control.Feedback type="invalid">
         {/* {parsing.error} */}
