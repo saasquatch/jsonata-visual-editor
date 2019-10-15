@@ -51,11 +51,11 @@ const IDEMode = Symbol("IDEMode");
 // See all the AST types: https://github.com/mtiller/jsonata/blob/ts-2.0/src/parser/ast.ts
 // const NestedPathValue = jsonata(`$join(steps.value,".")`);
 
-interface NodeEditorProps {
-  ast: AST;
+interface NodeEditorProps<NodeType extends AST> {
+  ast: NodeType;
   onChange: OnChange;
   validator?: (
-    ast: AST
+    ast: NodeType
   ) => {
     error: string;
     message: string;
@@ -98,39 +98,41 @@ const numberOperators = {
   "<": "less than",
   "<=": "less than or equal",
   ">=": "greater than or equal"
-};
+} as const;
+
 const baseOperators = {
   "=": "equals",
   "!=": "not equals"
-};
+} as const;
+
 const arrayOperators = {
   in: "array contains"
-};
+} as const;
 
 const comparionsOperators = {
   ...baseOperators,
   ...numberOperators,
   ...arrayOperators
-};
+} as const;
 
 const combinerOperators = {
   and: "and",
   or: "or"
-};
+} as const;
 const mathOperators = {
   "-": "minus",
   "+": "plus",
   "*": "times",
   "/": "divided by",
   "%": "modulo"
-};
+} as const;
 const operators = {
   ...comparionsOperators,
   ...mathOperators,
   ...combinerOperators
-};
+} as const;
 
-function NodeEditor(props: NodeEditorProps) {
+function NodeEditor(props: NodeEditorProps<AST>) {
   if (props.ast.type === "binary") {
     return <BinaryEditor {...props} />;
   } else if (props.ast.type === "path") {
@@ -145,7 +147,7 @@ function NodeEditor(props: NodeEditorProps) {
 }
 type Mode = Symbol;
 
-export function Editor(props: NodeEditorProps) {
+export function Editor(props: NodeEditorProps<AST>) {
   const [mode, setMode] = useState<Mode>(
     // props.ast.type === "binary" ? NodeMode : IDEMode
     IDEMode
@@ -172,7 +174,7 @@ export function Editor(props: NodeEditorProps) {
     serializedVersions.push(e.message);
   }
   try {
-    const l2 = serializer(jsonata(serializedVersions[0]).ast());
+    const l2 = serializer(jsonata(serializedVersions[0]).ast() as AST);
     serializedVersions.push(l2);
   } catch (e) {
     serializedVersions.push(e.message);
@@ -208,7 +210,7 @@ export function Editor(props: NodeEditorProps) {
 type IDEHookProps = {
   ast: AST;
   onChange: OnChange;
-  validator: (ast: AST) => Promise<boolean>;
+  validator?: (ast: AST) => Promise<boolean>;
   setError: (error: any) => void;
 };
 interface ParsingState {
@@ -253,10 +255,11 @@ function useIDEHook({ ast, onChange, validator, setError }: IDEHookProps) {
       onChange(newAst);
     });
   }
-  return [text, textChange, parsing];
+  return [text, textChange, parsing] as const;
 }
 
-export function IDEEditor({ ast, onChange, setToggleBlock }: NodeEditorProps) {
+type IDEEditorProps = NodeEditorProps<AST> & { setToggleBlock: (text:string|null) => void }
+export function IDEEditor({ ast, onChange, setToggleBlock }: IDEEditorProps) {
   const [text, textChange, parsing] = useIDEHook({
     ast,
     onChange: newValue => {
@@ -270,7 +273,7 @@ export function IDEEditor({ ast, onChange, setToggleBlock }: NodeEditorProps) {
   });
   return (
     <div>
-      <Form.Control as="textarea" rows="3" value={text} onChange={textChange} />
+      <Form.Control as="textarea" rows="3" value={text} onChange={e => /* @ts-ignore */ textChange(e.value)} />
       <br />
       {parsing.inProgress ? (
         "Parsing..."
@@ -327,7 +330,7 @@ function newBinaryAdder(type, ast, onChange, nested = false) {
     });
 }
 
-function RootNodeEditor(props: NodeEditorProps) {
+function RootNodeEditor(props: NodeEditorProps<AST>) {
   return (
     <div>
       <NodeEditor {...props} />
@@ -359,21 +362,21 @@ function isCombinerNode(ast: AST) {
   );
 }
 
-function BinaryEditor(props: NodeEditorProps) {
+function BinaryEditor(props: NodeEditorProps<BinaryNode>) {
   if (Object.keys(combinerOperators).includes(props.ast.value)) {
     return <CombinerEditor {...props} />;
   }
   if (Object.keys(comparionsOperators).includes(props.ast.value)) {
-    const swapper = ({ ast }) => ast.value === "in";
-    return <BinaryBaseEditor {...props} shouldSwap={swapper} />;
+    return <BinaryBaseEditor {...props} />;
   }
   // if (Object.keys(mathOperators).includes(props.ast.value)) {
   //   return <BinaryBaseEditor {...props} operators={mathOperators} />;
   // }
 }
 
-function BinaryBaseEditor(props: NodeEditorProps) {
-  const swap = props.shouldSwap && props.shouldSwap(props);
+function BinaryBaseEditor(props: NodeEditorProps<BinaryNode>) {
+  const shouldSwap = ({ ast }) => ast.value === "in";
+  const swap = shouldSwap(props);
   const leftKey = !swap ? "lhs" : "rhs";
   const rightKey = !swap ? "rhs" : "lhs";
   const validator = Object.keys(numberOperators).includes(props.ast.value)
@@ -487,9 +490,8 @@ function buildFlattenedBinaryValueSwap({ ast, parentType, newValue }) {
   }
 }
 
-type CombinerProps = NodeEditorProps & {
-  ast: BinaryNode;
-};
+type CombinerProps = NodeEditorProps<BinaryNode>;
+
 function CombinerEditor(props: CombinerProps) {
   const flattenedBinaryNodes = flattenBinaryNodesThatMatch({
     ast: props.ast,
@@ -559,7 +561,7 @@ const GrowDiv = styled.div`
   flex-shrink: 1;
 `;
 
-function PathEditor({ ast, onChange, validator }: NodeEditorProps) {
+function PathEditor({ ast, onChange, validator }: NodeEditorProps<PathNode>) {
   // async function validator(ast) {
   //   if (ast.type !== "path") {
   //     throw new Error("Only paths are supported");
@@ -599,6 +601,7 @@ function nextAst(ast: AST) {
     // @ts-ignore
     if (ast.value && !isNaN(ast.value)) {
       // TODO:
+      // @ts-ignore
       return jsonata(ast.value).ast();
     } else {
       // Numbers aren't valid paths, so we can't just switch to them
@@ -657,7 +660,7 @@ function toEditableText(ast: AST) {
   }
 }
 
-function TypeSwitch({ ast, onChange }: NodeEditorProps) {
+function TypeSwitch({ ast, onChange }: NodeEditorProps<LiteralNode|PathNode>) {
   return (
     <OverlayTrigger
       trigger="hover"
@@ -673,7 +676,7 @@ function TypeSwitch({ ast, onChange }: NodeEditorProps) {
   );
 }
 
-function CoercibleValueEditor({ ast, onChange, validator }: NodeEditorProps) {
+function CoercibleValueEditor({ ast, onChange, validator }: NodeEditorProps<LiteralNode>) {
   // let error = validator && validator(ast);
 
   return (
@@ -693,7 +696,7 @@ function CoercibleValueEditor({ ast, onChange, validator }: NodeEditorProps) {
   );
 }
 
-function BlockEditor({ ast }: NodeEditorProps) {
+function BlockEditor({ ast }: NodeEditorProps<BlockNode>) {
   return (
     <Inset>
       {ast.expressions.map(exp => (

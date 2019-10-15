@@ -45,6 +45,7 @@ export interface VariableNode extends Node {
   type: "variable";
   value: string;
   predicate?: [JsonataASTNode];
+  stages?: [JsonataASTNode];
 }
 
 export interface PathNode extends Node {
@@ -62,11 +63,21 @@ export interface ApplyNode extends Node {
   value: "~>";
 }
 
-export interface UnaryNode extends Node {
+export type UnaryNode = ObjectUnaryNode | ArrayUnaryNode;
+
+export interface ObjectUnaryNode extends Node {
   type: "unary";
   value: "{";
   lhs: [UnaryTuple];
 }
+
+export interface ArrayUnaryNode extends Node {
+  type: "unary";
+  value: "[";
+  expressions: JsonataASTNode[];
+  consarray: boolean;
+}
+
 type UnaryTuple = [JsonataASTNode, JsonataASTNode];
 
 export interface FilterNode extends Node {
@@ -93,6 +104,8 @@ export interface DescendantNode extends Node {
   type: "descendant";
   value: string;
 }
+
+export type LiteralNode = NumberNode | StringNode | ValueNode;
 
 export type JsonataASTNode =
   | NumberNode

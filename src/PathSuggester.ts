@@ -11,13 +11,15 @@ export type Path = {
 type ParentOpts = {
   pathPrefix?: string;
   labelSuffix?: string;
+  labelPrefix?: string;
 };
 
-function getPaths(schema: JsonSchema, opts?: ParentOpts): Path[] {
-  const pfixed = (k: string) =>
-    opts && opts.pathPrefix ? opts.pathPrefix + "." + k : k;
-  const pfixedTitle = (k: string) =>
-    opts && opts.labelSuffix ? k + opts.labelSuffix : k;
+function getPaths(
+  schema: JsonSchema,
+  { labelPrefix = "", labelSuffix = "", pathPrefix }: ParentOpts = {}
+): Path[] {
+  const pfixed = (k: string) => (pathPrefix ? pathPrefix + "." + k : k);
+  const pfixedTitle = (k: string) => labelPrefix + k + labelSuffix;
 
   let paths: Path[] = [];
   if (schema.anyOf) {
@@ -43,11 +45,12 @@ function getPaths(schema: JsonSchema, opts?: ParentOpts): Path[] {
     });
     paths = [...paths, ...objectPaths];
   } else if (schema.type === "array") {
-    const firstElementPath = pfixed("[0]");
+    const firstElementPath = pfixed("$[0]");
     paths = [
       ...getPaths(schema.items, {
-        pathPrefix: pfixed("[0]"),
-        labelSuffix: pfixedTitle("Set Of")
+        pathPrefix: pfixed("$"),
+        labelPrefix: pfixedTitle("List Of ["),
+        labelSuffix: "]"
       }),
       {
         path: firstElementPath,
@@ -58,7 +61,7 @@ function getPaths(schema: JsonSchema, opts?: ParentOpts): Path[] {
         })
       },
       {
-        path: pfixed("[-1]"),
+        path: pfixed("$[-1]"),
         title: pfixedTitle("LastElement Element")
         // subPaths: getPaths(schema.items)
       }

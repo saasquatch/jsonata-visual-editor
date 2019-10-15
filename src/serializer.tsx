@@ -1,4 +1,4 @@
-import { JsonataASTNode } from "./jsonata";
+import { JsonataASTNode, ObjectUnaryNode, ArrayUnaryNode } from "./jsonata";
 
 type AST = JsonataASTNode;
 
@@ -31,10 +31,14 @@ export function serializer(node: AST): string {
       ")"
     );
   } else if (node.type === "variable") {
+    let stages = "";
+    if (node.stages) {
+      stages = node.stages.map(serializer).join("");
+    }
     const predicate = node.predicate
       ? node.predicate.map(serializer).join()
       : "";
-    return "$" + node.value + predicate;
+    return "$" + node.value + predicate + stages;
   } else if (node.type === "wildcard") {
     return node.value;
   } else if (node.type === "descendant") {
@@ -68,14 +72,25 @@ export function serializer(node: AST): string {
   } else if (node.type === "apply") {
     return node.value;
   } else if (node.type === "unary") {
-    return (
-      node.value +
-      "\n\t" +
-      node.lhs
-        .map(set => serializer(set[0]) + ":" + serializer(set[1]))
-        .join(",\n\t") +
-      "\n}"
-    );
+    if (node.value === "{" && node.type === "unary") {
+      let o = node as ObjectUnaryNode;
+      return (
+        node.value +
+        "\n\t" +
+        o.lhs
+          .map(
+            (set: JsonataASTNode[]) =>
+              serializer(set[0]) + ":" + serializer(set[1])
+          )
+          .join(",\n\t") +
+        "\n}"
+      );
+    } else if (node.value === "[") {
+      let a = node as ArrayUnaryNode;
+      return node.value + a.expressions.map(serializer).join(", ") + "]";
+    } else {
+      throw Error("Unhandled unary node " + node.value);
+    }
   }
 
   return "Error: Invalid node type.";
