@@ -1,43 +1,89 @@
-import React, { useState } from "react";
+import React from "react";
 
 import AsyncCreatableSelect from "react-select/async-creatable";
-import { OptionsType, OptionProps } from "react-select/src/types";
 import { components as defaultComponents } from "react-select";
+import { Badge } from "react-bootstrap";
 
 import jsonata from "jsonata";
+
 import { JsonataASTNode } from "./jsonata";
 import { serializer } from "./serializer";
 import getPaths, { Path as PathSuggestion } from "./PathSuggester";
 import PurchaseEvent from "./PurchaseEvent.schema";
 
 type AST = JsonataASTNode;
-type Option = {
-  label: string;
-  value: AST;
-  data?: PathSuggestion;
+type Option =
+  | {
+      type: "suggested";
+      label: string;
+      value: AST;
+      data: PathSuggestion;
+    }
+  | {
+      type: "created";
+      label: string;
+      value: AST;
+    };
+
+type CustomOptionProps = React.ComponentProps<typeof defaultComponents.Option>;
+type CustomValueProps = React.ComponentProps<typeof defaultComponents.Value>;
+
+const CustomOption = (props: CustomOptionProps) => {
+  const option = props.data as Option;
+  if (option.type === "created") {
+    return (
+      <defaultComponents.Option {...props}>
+        <p>{props.label}</p>
+        <Badge>new</Badge>
+      </defaultComponents.Option>
+    );
+  } else if (option.type === "suggested") {
+    const p = option.data;
+    const { label } = props;
+    const typeString =
+      (p.isJsonataSequence ? " list<" : " ") +
+      p.type +
+      (p.isJsonataSequence ? ">" : "");
+    return (
+      <defaultComponents.Option {...props}>
+        <p>{label}</p>
+        <code>{p.path}</code>
+        <Badge>{typeString}</Badge>
+      </defaultComponents.Option>
+    );
+  } else {
+    // For new items before they are created.
+    const validPath = isValidNewOption(option.value);
+    return (
+      <defaultComponents.Option {...props}>
+        {validPath && (
+          <div>
+            Create new: <code>{option.value}</code>
+          </div>
+        )}
+        {!validPath && <div>Umnmatchable</div>}
+      </defaultComponents.Option>
+    );
+  }
 };
 
-type CustomOptionProps = OptionProps<Option>;
-const CustomOption = (props: CustomOptionProps) => (
-  <defaultComponents.Option {...props} />
-);
+const PurchasePaths = getPaths(PurchaseEvent as any);
 
-const PurchasePaths = getPaths(PurchaseEvent);
-
-function Reducer(acc: OptionsType<Option>[], p: PathSuggestion) {
-  const subOptions = p.subPaths ? p.subPaths.reduce(Reducer, []) : [];
+function Reducer(acc: Option[], p: PathSuggestion): Option[] {
+  const subOptions: Option[] = p.subPaths ? p.subPaths.reduce(Reducer, []) : [];
   return [
     ...acc,
     {
-      label: p.title + " " + p.path,
-      value: jsonata(p.path).ast(),
+      type: "suggested",
+      label: p.title,
+      value: jsonata(p.path).ast() as AST,
       data: p
     },
     ...subOptions
   ];
 }
 
-const colourOptions = PurchasePaths.reduce(Reducer, []);
+const colourOptions: Option[] = PurchasePaths.reduce(Reducer, []);
 
 const exactMatch = (inputValue: string) => {
   return colourOptions.find((i: Option) => i.label === inputValue);
@@ -60,31 +106,35 @@ type PathEditorProps = {
 
 const components = {
   Option: CustomOption
+  // SingleValue: props => (
+  //   <defaultComponents.Value>{props.data.label}</defaultComponents.Value>
+  // )
 };
+
+function isValidNewOption(inputValue: string): boolean {
+  try {
+    const isPath = jsonata(inputValue).ast().type === "path";
+    return isPath;
+  } catch (e) {
+    return false;
+  }
+}
 
 export default function PathEditor(props: PathEditorProps) {
   const handleCreate = (inputValue: string) => {
     console.group("Option created");
     console.log("Wait a moment...");
+
     const newOption: Option = {
+      type: "created",
       label: inputValue,
-      // @ts-ignore -- jsonata built-in AST type is invalid
-      value: jsonata(inputValue).ast()
+      value: jsonata(inputValue).ast() as AST
     };
     console.log(newOption);
     console.groupEnd();
     colourOptions.push(newOption);
     props.onChange(newOption);
   };
-
-  function isValidNewOption(inputValue: string): boolean {
-    try {
-      const isPath = jsonata(inputValue).ast().type === "path";
-      return isPath;
-    } catch (e) {
-      return false;
-    }
-  }
 
   const stringValue = serializer(props.value);
   const foundOption = exactMatch(stringValue);

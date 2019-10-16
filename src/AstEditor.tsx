@@ -98,39 +98,39 @@ const numberOperators = {
   "<": "less than",
   "<=": "less than or equal",
   ">=": "greater than or equal"
-} as const;
+};
 
 const baseOperators = {
   "=": "equals",
   "!=": "not equals"
-} as const;
+};
 
 const arrayOperators = {
   in: "array contains"
-} as const;
+};
 
 const comparionsOperators = {
   ...baseOperators,
   ...numberOperators,
   ...arrayOperators
-} as const;
+};
 
 const combinerOperators = {
   and: "and",
   or: "or"
-} as const;
+};
 const mathOperators = {
   "-": "minus",
   "+": "plus",
   "*": "times",
   "/": "divided by",
   "%": "modulo"
-} as const;
+};
 const operators = {
   ...comparionsOperators,
   ...mathOperators,
   ...combinerOperators
-} as const;
+};
 
 function NodeEditor(props: NodeEditorProps<AST>) {
   if (props.ast.type === "binary") {
@@ -255,7 +255,7 @@ function useIDEHook({ ast, onChange, validator, setError }: IDEHookProps) {
       onChange(newAst);
     });
   }
-  return [text, textChange, parsing] as const;
+  return [text, textChange, parsing];
 }
 
 type IDEEditorProps = NodeEditorProps<AST> & { setToggleBlock: (text:string|null) => void }
@@ -332,11 +332,9 @@ function newBinaryAdder(type, ast, onChange, nested = false) {
 
 function RootNodeEditor(props: NodeEditorProps<AST>) {
   return (
-    <div>
+    <>
       <NodeEditor {...props} />
-      {isCombinerNode(props.ast) ? (
-        <span />
-      ) : (
+      {isCombinerNode(props.ast) && (
         <ButtonGroup>
           <Button
             variant="secondary"
@@ -352,7 +350,7 @@ function RootNodeEditor(props: NodeEditorProps<AST>) {
           </Button>
         </ButtonGroup>
       )}
-    </div>
+    </>
   );
 }
 
@@ -383,7 +381,7 @@ function BinaryBaseEditor(props: NodeEditorProps<BinaryNode>) {
     ? Validators(props.schemaProvider).onlyNumberValidator
     : null;
   return (
-    <div>
+    <>
       <Form.Row>
         <NodeEditor
           ast={props.ast[leftKey]}
@@ -444,7 +442,7 @@ function BinaryBaseEditor(props: NodeEditorProps<BinaryNode>) {
           validator={validator}
         />
       </Form.Row>
-    </div>
+    </>
   );
 }
 
