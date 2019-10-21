@@ -5,7 +5,7 @@ import jsonata from "jsonata";
 import { Editor } from "./AstEditor";
 import { ErrorBoundary } from "./ErrorBoundary";
 
-const simpleCondition = `revenue = "one" or b = "two"`;
+const simpleCondition = `a ? "true" : "false"`;
 const expr = jsonata(simpleCondition);
 const defaultAst = expr.ast();
 const introspection = jsonata(`**[type="name"].value`);

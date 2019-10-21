@@ -105,6 +105,13 @@ export interface DescendantNode extends Node {
   value: string;
 }
 
+export interface ConditionNode extends Node {
+  type: "condition";
+  condition: JsonataASTNode;
+  then: JsonataASTNode;
+  else: JsonataASTNode;
+}
+
 export type LiteralNode = NumberNode | StringNode | ValueNode;
 
 export type JsonataASTNode =
@@ -121,4 +128,5 @@ export type JsonataASTNode =
   | ValueNode
   | NameNode
   | WildcardNode
-  | DescendantNode;
+  | DescendantNode
+  | ConditionNode;

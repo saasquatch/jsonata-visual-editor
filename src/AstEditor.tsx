@@ -24,7 +24,7 @@ import AntdIcon from "@ant-design/icons-react";
 import PathPicker from "./PathEditor";
 import ButtonHelp from "./ButtonHelp";
 import { serializer } from "./serializer";
-import { JsonataASTNode } from "./jsonata";
+import { JsonataASTNode, BinaryNode } from "./jsonata";
 
 type AST = JsonataASTNode;
 type OnChange = (ast: AST) => void;
@@ -63,7 +63,7 @@ interface NodeEditorProps<NodeType extends AST> {
 }
 
 const isNumberNode = (n: AST) => n.type === "number";
-const isPathNode = (n: AST) => n.type === "path";
+const isPathNode = (n: AST) => true && n.type === "path";
 
 function Validators(schemaProvider) {
   return {
