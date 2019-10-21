@@ -5,6 +5,7 @@ import {
   InputGroup,
   Form,
   Col,
+  Row,
   Button,
   ButtonGroup,
   OverlayTrigger,
@@ -24,7 +25,7 @@ import AntdIcon from "@ant-design/icons-react";
 import PathPicker from "./PathEditor";
 import ButtonHelp from "./ButtonHelp";
 import { serializer } from "./serializer";
-import { JsonataASTNode, BinaryNode } from "./jsonata";
+import { JsonataASTNode, BinaryNode, PathNode, LiteralNode, BlockNode, ConditionNode } from "./jsonata";
 
 type AST = JsonataASTNode;
 type OnChange = (ast: AST) => void;
@@ -54,21 +55,23 @@ const IDEMode = Symbol("IDEMode");
 interface NodeEditorProps<NodeType extends AST> {
   ast: NodeType;
   onChange: OnChange;
+  cols?: string; // Number of columns, from 1 to 12. See Grid system in Bootstrap
   validator?: (
     ast: NodeType
-  ) => {
-    error: string;
-    message: string;
-  };
+  ) => ValidatorError;
 }
+interface ValidatorError{
+  error: string;
+  message: string;
+}   
 
 const isNumberNode = (n: AST) => n.type === "number";
-const isPathNode = (n: AST) => true && n.type === "path";
+const isPathNode = (n: AST) => n.type === "path";
 
 function Validators(schemaProvider) {
   return {
-    onlyNumberValidator(ast) {
-      let error;
+    onlyNumberValidator(ast:AST) {
+      let error:ValidatorError;
       if (isPathNode(ast)) {
         const pathType =
           schemaProvider && schemaProvider.getTypeAtPath(serializer(ast));
@@ -133,14 +136,17 @@ const operators = {
 };
 
 function NodeEditor(props: NodeEditorProps<AST>) {
-  if (props.ast.type === "binary") {
-    return <BinaryEditor {...props} />;
-  } else if (props.ast.type === "path") {
-    return <PathEditor {...props} />;
-  } else if (["number", "value", "string"].includes(props.ast.type)) {
-    return <CoercibleValueEditor {...props} />;
-  } else if (props.ast.type === "block") {
-    return <BlockEditor {...props} />;
+  const {ast, ...rest} = props;
+  if (ast.type === "binary") {
+    return <BinaryEditor {...rest} ast={ast}/>;
+  } else if (ast.type === "path") {
+    return <PathEditor {...rest} ast={ast}/>;
+  } else if (ast.type === "number" || ast.type === "value" || ast.type === "string") {
+    return <CoercibleValueEditor {...rest} ast={ast}/>;
+  } else if (ast.type === "block") {
+    return <BlockEditor {...rest} ast={ast}/>;
+  } else if (ast.type === "condition") {
+    return <ConditionEditor {...rest} ast={ast}/>;
   } else {
     throw new Error("Unsupported node type: " + props.ast.type);
   }
@@ -217,7 +223,7 @@ interface ParsingState {
   inProgress: boolean;
   error?: string;
 }
-function useIDEHook({ ast, onChange, validator, setError }: IDEHookProps) {
+function useIDEHook({ ast, onChange, validator, setError }: IDEHookProps) : [string, (newText:string)=>void, ParsingState] {
   const [text, setText] = useState<string>(serializer(ast));
   const [parsing, setParsing] = useState<ParsingState>({
     inProgress: false,
@@ -225,6 +231,7 @@ function useIDEHook({ ast, onChange, validator, setError }: IDEHookProps) {
   });
 
   function textChange(newText: string) {
+    if(typeof newText !== "string") throw Error("Invalid text")
     setText(newText);
     setParsing({
       inProgress: true,
@@ -255,7 +262,7 @@ function useIDEHook({ ast, onChange, validator, setError }: IDEHookProps) {
       onChange(newAst);
     });
   }
-  return [text, textChange, parsing];
+  return [text, textChange, parsing]; //  as const // Should use `as const` but codesandbox complains
 }
 
 type IDEEditorProps = NodeEditorProps<AST> & { setToggleBlock: (text:string|null) => void }
@@ -273,7 +280,7 @@ export function IDEEditor({ ast, onChange, setToggleBlock }: IDEEditorProps) {
   });
   return (
     <div>
-      <Form.Control as="textarea" rows="3" value={text} onChange={e => /* @ts-ignore */ textChange(e.value)} />
+      <Form.Control as="textarea" rows="3" value={text} onChange={e => /* @ts-ignore */ textChange(e.target.value)} />
       <br />
       {parsing.inProgress ? (
         "Parsing..."
@@ -307,10 +314,14 @@ const DefaultNewCondition = {
   rhs: defaultNumber()
 };
 
+
+// TODO : Make this recursive, smarter
 const NodeWhitelist = jsonata(`
+  true or 
   type = "binary"
   or (type ="block" and type.expressions[type!="binary"].$length = 0)
 `);
+
 function isValidBasicExpression(newValue: AST) {
   try {
     if (NodeWhitelist.evaluate(newValue)) {
@@ -559,7 +570,7 @@ const GrowDiv = styled.div`
   flex-shrink: 1;
 `;
 
-function PathEditor({ ast, onChange, validator }: NodeEditorProps<PathNode>) {
+function PathEditor({ ast, onChange, validator, cols="5" }: NodeEditorProps<PathNode>) {
   // async function validator(ast) {
   //   if (ast.type !== "path") {
   //     throw new Error("Only paths are supported");
@@ -568,7 +579,7 @@ function PathEditor({ ast, onChange, validator }: NodeEditorProps<PathNode>) {
   // }
   // const [text, textChange, parsing] = useIDEHook({ ast, onChange, validator });
   return (
-    <InputGroup as={Col} sm="5">
+    <InputGroup as={Col} sm={cols}>
           <GrowDiv>
 <PathPicker value={ast} onChange={option => onChange(option.value)} />
       </GrowDiv>
@@ -617,7 +628,7 @@ function isNumber(str: string) {
   return !isNaN(str) && !isNaN(parseFloat(str));
 }
 
-function autoCoerce({ ast, newValue }: { ast: AST; newValue: string }) {
+function autoCoerce(newValue: string) {
   const cleanVal = newValue.trim().toLowerCase();
   if (isNumber(newValue)) {
     return {
@@ -625,7 +636,7 @@ function autoCoerce({ ast, newValue }: { ast: AST; newValue: string }) {
       value: parseFloat(newValue)
     };
   } else if (["true", "false", "null"].includes(cleanVal)) {
-    let value;
+    let value:any;
     if (cleanVal === "true") {
       value = true;
     } else if (cleanVal === "false") {
@@ -674,16 +685,16 @@ function TypeSwitch({ ast, onChange }: NodeEditorProps<LiteralNode|PathNode>) {
   );
 }
 
-function CoercibleValueEditor({ ast, onChange, validator }: NodeEditorProps<LiteralNode>) {
+function CoercibleValueEditor({ ast, onChange, validator, cols="5" }: NodeEditorProps<LiteralNode>) {
   // let error = validator && validator(ast);
 
   return (
-    <InputGroup as={Col} sm="5">
+    <InputGroup as={Col} sm={cols}>
       <Form.Control
         type="text"
         placeholder="Enter a value"
         value={toEditableText(ast)}
-        onChange={e => onChange(autoCoerce({ ast, newValue: e.target.value }))}
+        onChange={e => onChange(autoCoerce(e.target.value))}
       />
       <TypeSwitch ast={ast} onChange={onChange} />
 
@@ -694,12 +705,61 @@ function CoercibleValueEditor({ ast, onChange, validator }: NodeEditorProps<Lite
   );
 }
 
-function BlockEditor({ ast }: NodeEditorProps<BlockNode>) {
+function BlockEditor({ ast, onChange }: NodeEditorProps<BlockNode>) {
   return (
     <Inset>
-      {ast.expressions.map(exp => (
-        <NodeEditor ast={exp} />
+      {ast.expressions.map((exp, idx) => (
+        <NodeEditor ast={exp} onChange={(newAst) => {
+          const newExpressions:AST[] = [...ast.expressions];
+          newExpressions[idx] = newAst;
+          onChange({
+            ...ast,
+            expressions:newExpressions
+          })
+        }} />
       ))}
     </Inset>
   );
+}
+
+function ConditionEditor({ ast, onChange }: NodeEditorProps<ConditionNode>){
+  return <>
+    <Row>
+    <Col sm="8">
+    <h2>Condition</h2>
+  </Col>
+  <Col sm="2">
+  <h2>Then</h2>
+  </Col>
+  <Col sm="2">
+  <h2>Else</h2>
+  </Col>
+
+    </Row>
+        <Row>
+        <Col sm="8">
+        <NodeEditor ast={ast.condition} onChange={(newAst:AST) => {
+          onChange({
+            ...ast,
+            condition: newAst
+          })
+        }} />
+      </Col>
+      <Col sm="2">
+      <NodeEditor ast={ast.then} onChange={(newAst:AST) => {
+                    onChange({
+                      ...ast,
+                      then: newAst
+                    })
+        }} cols="2"/>
+      <NodeEditor ast={ast.else} onChange={(newAst:AST) => {
+                    onChange({
+                      ...ast,
+                      else: newAst
+                    })
+        }}cols="2"/>
+      </Col>
+    
+        </Row>
+    </>
 }
