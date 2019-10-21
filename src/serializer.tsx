@@ -63,9 +63,9 @@ export function serializer(node: AST): string {
   } else if (node.type === "condition") {
     return (
       serializer(node.condition) +
-      "?" +
+      " ? " +
       serializer(node.then) +
-      ":" +
+      " : " +
       serializer(node.else)
     );
   } else if (node.type === "value") {

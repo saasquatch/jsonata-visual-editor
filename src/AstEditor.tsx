@@ -9,6 +9,7 @@ import {
   Button,
   ButtonGroup,
   OverlayTrigger,
+  Table,
   Tooltip
 } from "react-bootstrap";
 import {
@@ -25,7 +26,15 @@ import AntdIcon from "@ant-design/icons-react";
 import PathPicker from "./PathEditor";
 import ButtonHelp from "./ButtonHelp";
 import { serializer } from "./serializer";
-import { JsonataASTNode, BinaryNode, PathNode, LiteralNode, BlockNode, ConditionNode } from "./jsonata";
+import {
+  JsonataASTNode,
+  BinaryNode,
+  PathNode,
+  LiteralNode,
+  BlockNode,
+  ConditionNode,
+  UnaryNode
+} from "./jsonata";
 
 type AST = JsonataASTNode;
 type OnChange = (ast: AST) => void;
@@ -56,22 +65,20 @@ interface NodeEditorProps<NodeType extends AST> {
   ast: NodeType;
   onChange: OnChange;
   cols?: string; // Number of columns, from 1 to 12. See Grid system in Bootstrap
-  validator?: (
-    ast: NodeType
-  ) => ValidatorError;
+  validator?: (ast: NodeType) => ValidatorError;
 }
-interface ValidatorError{
+interface ValidatorError {
   error: string;
   message: string;
-}   
+}
 
 const isNumberNode = (n: AST) => n.type === "number";
 const isPathNode = (n: AST) => n.type === "path";
 
 function Validators(schemaProvider) {
   return {
-    onlyNumberValidator(ast:AST) {
-      let error:ValidatorError;
+    onlyNumberValidator(ast: AST) {
+      let error: ValidatorError;
       if (isPathNode(ast)) {
         const pathType =
           schemaProvider && schemaProvider.getTypeAtPath(serializer(ast));
@@ -136,17 +143,25 @@ const operators = {
 };
 
 function NodeEditor(props: NodeEditorProps<AST>) {
-  const {ast, ...rest} = props;
+  const { ast, ...rest } = props;
   if (ast.type === "binary") {
-    return <BinaryEditor {...rest} ast={ast}/>;
+    return <BinaryEditor {...rest} ast={ast} />;
   } else if (ast.type === "path") {
-    return <PathEditor {...rest} ast={ast}/>;
-  } else if (ast.type === "number" || ast.type === "value" || ast.type === "string") {
-    return <CoercibleValueEditor {...rest} ast={ast}/>;
+    return <PathEditor {...rest} ast={ast} />;
+  } else if (
+    ast.type === "number" ||
+    ast.type === "value" ||
+    ast.type === "string"
+  ) {
+    return <CoercibleValueEditor {...rest} ast={ast} />;
   } else if (ast.type === "block") {
-    return <BlockEditor {...rest} ast={ast}/>;
+    return <BlockEditor {...rest} ast={ast} />;
   } else if (ast.type === "condition") {
-    return <ConditionEditor {...rest} ast={ast}/>;
+    return <ConditionEditor {...rest} ast={ast} />;
+  } else if (ast.type === "variable") {
+    return <VariableEditor {...rest} ast={ast} />;
+  } else if (ast.type === "unary"){
+    return <UnaryEditor {...rest} ast={ast} />;
   } else {
     throw new Error("Unsupported node type: " + props.ast.type);
   }
@@ -223,7 +238,12 @@ interface ParsingState {
   inProgress: boolean;
   error?: string;
 }
-function useIDEHook({ ast, onChange, validator, setError }: IDEHookProps) : [string, (newText:string)=>void, ParsingState] {
+function useIDEHook({
+  ast,
+  onChange,
+  validator,
+  setError
+}: IDEHookProps): [string, (newText: string) => void, ParsingState] {
   const [text, setText] = useState<string>(serializer(ast));
   const [parsing, setParsing] = useState<ParsingState>({
     inProgress: false,
@@ -231,7 +251,7 @@ function useIDEHook({ ast, onChange, validator, setError }: IDEHookProps) : [str
   });
 
   function textChange(newText: string) {
-    if(typeof newText !== "string") throw Error("Invalid text")
+    if (typeof newText !== "string") throw Error("Invalid text");
     setText(newText);
     setParsing({
       inProgress: true,
@@ -265,7 +285,9 @@ function useIDEHook({ ast, onChange, validator, setError }: IDEHookProps) : [str
   return [text, textChange, parsing]; //  as const // Should use `as const` but codesandbox complains
 }
 
-type IDEEditorProps = NodeEditorProps<AST> & { setToggleBlock: (text:string|null) => void }
+type IDEEditorProps = NodeEditorProps<AST> & {
+  setToggleBlock: (text: string | null) => void;
+};
 export function IDEEditor({ ast, onChange, setToggleBlock }: IDEEditorProps) {
   const [text, textChange, parsing] = useIDEHook({
     ast,
@@ -280,7 +302,12 @@ export function IDEEditor({ ast, onChange, setToggleBlock }: IDEEditorProps) {
   });
   return (
     <div>
-      <Form.Control as="textarea" rows="3" value={text} onChange={e => /* @ts-ignore */ textChange(e.target.value)} />
+      <Form.Control
+        as="textarea"
+        rows="3"
+        value={text}
+        onChange={e => /* @ts-ignore */ textChange(e.target.value)}
+      />
       <br />
       {parsing.inProgress ? (
         "Parsing..."
@@ -301,19 +328,36 @@ function defaultPath() {
     ]
   };
 }
+
+function defaultString() {
+  return {
+    value: "text",
+    type: "string"
+  };
+}
 function defaultNumber() {
   return {
     value: 0,
     type: "number"
   };
 }
-const DefaultNewCondition = {
-  type: "binary",
-  value: "=",
-  lhs: defaultPath(),
-  rhs: defaultNumber()
-};
-
+function defaultComparison(): BinaryNode {
+  return {
+    type: "binary",
+    value: "=",
+    lhs: defaultPath(),
+    rhs: defaultNumber()
+  };
+}
+function defaultCondition(): ConditionNode {
+  return {
+    type: "condition",
+    condition: defaultComparison(),
+    then: defaultNumber(),
+    else: defaultNumber()
+  };
+}
+const DefaultNewCondition = defaultComparison();
 
 // TODO : Make this recursive, smarter
 const NodeWhitelist = jsonata(`
@@ -378,9 +422,7 @@ function BinaryEditor(props: NodeEditorProps<BinaryNode>) {
   if (Object.keys(comparionsOperators).includes(props.ast.value)) {
     return <BinaryBaseEditor {...props} />;
   }
-  // if (Object.keys(mathOperators).includes(props.ast.value)) {
-  //   return <BinaryBaseEditor {...props} operators={mathOperators} />;
-  // }
+  // TODO: Implement MathNode
 }
 
 function BinaryBaseEditor(props: NodeEditorProps<BinaryNode>) {
@@ -563,14 +605,18 @@ function CombinerEditor(props: CombinerProps) {
   );
 }
 
-
 const GrowDiv = styled.div`
   flex-basis: auto;
   flex-grow: 1;
   flex-shrink: 1;
 `;
 
-function PathEditor({ ast, onChange, validator, cols="5" }: NodeEditorProps<PathNode>) {
+function PathEditor({
+  ast,
+  onChange,
+  validator,
+  cols = "5"
+}: NodeEditorProps<PathNode>) {
   // async function validator(ast) {
   //   if (ast.type !== "path") {
   //     throw new Error("Only paths are supported");
@@ -580,8 +626,8 @@ function PathEditor({ ast, onChange, validator, cols="5" }: NodeEditorProps<Path
   // const [text, textChange, parsing] = useIDEHook({ ast, onChange, validator });
   return (
     <InputGroup as={Col} sm={cols}>
-          <GrowDiv>
-<PathPicker value={ast} onChange={option => onChange(option.value)} />
+      <GrowDiv>
+        <PathPicker value={ast} onChange={option => onChange(option.value)} />
       </GrowDiv>
       <TypeSwitch ast={ast} onChange={onChange} />
       <Form.Control.Feedback type="invalid">
@@ -636,7 +682,7 @@ function autoCoerce(newValue: string) {
       value: parseFloat(newValue)
     };
   } else if (["true", "false", "null"].includes(cleanVal)) {
-    let value:any;
+    let value: any;
     if (cleanVal === "true") {
       value = true;
     } else if (cleanVal === "false") {
@@ -669,12 +715,17 @@ function toEditableText(ast: AST) {
   }
 }
 
-function TypeSwitch({ ast, onChange }: NodeEditorProps<LiteralNode|PathNode>) {
+function TypeSwitch({
+  ast,
+  onChange
+}: NodeEditorProps<LiteralNode | PathNode>) {
   return (
     <OverlayTrigger
       trigger="hover"
       placement="top"
-      overlay={<Tooltip>{DescriptionMap[ast.type]}</Tooltip>}
+      overlay={
+        <Tooltip id="todo: needs global id">{DescriptionMap[ast.type]}</Tooltip>
+      }
     >
       <InputGroup.Prepend>
         <InputGroup.Text onClick={() => onChange(nextAst(ast))}>
@@ -685,7 +736,12 @@ function TypeSwitch({ ast, onChange }: NodeEditorProps<LiteralNode|PathNode>) {
   );
 }
 
-function CoercibleValueEditor({ ast, onChange, validator, cols="5" }: NodeEditorProps<LiteralNode>) {
+function CoercibleValueEditor({
+  ast,
+  onChange,
+  validator,
+  cols = "5"
+}: NodeEditorProps<LiteralNode>) {
   // let error = validator && validator(ast);
 
   return (
@@ -709,57 +765,234 @@ function BlockEditor({ ast, onChange }: NodeEditorProps<BlockNode>) {
   return (
     <Inset>
       {ast.expressions.map((exp, idx) => (
-        <NodeEditor ast={exp} onChange={(newAst) => {
-          const newExpressions:AST[] = [...ast.expressions];
-          newExpressions[idx] = newAst;
-          onChange({
-            ...ast,
-            expressions:newExpressions
-          })
-        }} />
+        <NodeEditor
+          ast={exp}
+          onChange={newAst => {
+            const newExpressions: AST[] = [...ast.expressions];
+            newExpressions[idx] = newAst;
+            onChange({
+              ...ast,
+              expressions: newExpressions
+            });
+          }}
+        />
       ))}
     </Inset>
   );
 }
 
-function ConditionEditor({ ast, onChange }: NodeEditorProps<ConditionNode>){
-  return <>
-    <Row>
-    <Col sm="8">
-    <h2>Condition</h2>
-  </Col>
-  <Col sm="2">
-  <h2>Then</h2>
-  </Col>
-  <Col sm="2">
-  <h2>Else</h2>
-  </Col>
+type FlattenerProps = {
+  ast: AST;
+  onChange: OnChange;
+};
 
-    </Row>
-        <Row>
-        <Col sm="8">
-        <NodeEditor ast={ast.condition} onChange={(newAst:AST) => {
-          onChange({
-            ...ast,
-            condition: newAst
-          })
-        }} />
-      </Col>
-      <Col sm="2">
-      <NodeEditor ast={ast.then} onChange={(newAst:AST) => {
-                    onChange({
-                      ...ast,
-                      then: newAst
-                    })
-        }} cols="2"/>
-      <NodeEditor ast={ast.else} onChange={(newAst:AST) => {
-                    onChange({
-                      ...ast,
-                      else: newAst
-                    })
-        }}cols="2"/>
-      </Col>
-    
-        </Row>
+type Flattened = {
+  pairs: {
+    condition: FlattenerProps;
+    then: FlattenerProps;
+    original: FlattenerProps;
+  }[];
+  finalElse: FlattenerProps;
+};
+
+function flattenConditions({ ast, onChange }: FlattenerProps): Flattened {
+  if (ast.type === "condition") {
+    const handlers = {
+      condition: (newAst: AST) =>
+        onChange({
+          ...ast,
+          condition: newAst
+        }),
+      then: (newAst: AST) =>
+        onChange({
+          ...ast,
+          then: newAst
+        }),
+      else: (newAst: AST) =>
+        onChange({
+          ...ast,
+          else: newAst
+        })
+    };
+
+    const nested = flattenConditions({
+      ast: ast.else,
+      onChange: handlers.else
+    });
+
+    return {
+      pairs: [
+        {
+          condition: {
+            ast: ast.condition,
+            onChange: handlers.condition
+          },
+          then: {
+            ast: ast.then,
+            onChange: handlers.then
+          },
+          original: {
+            ast,
+            onChange
+          }
+        },
+        ...nested.pairs
+      ],
+      finalElse: nested.finalElse
+    };
+  }
+
+  return {
+    pairs: [],
+    finalElse: {
+      ast,
+      onChange
+    }
+  };
+}
+
+
+
+function VariableEditor({ast, onChange, cols="5"}: NodeEditorProps<ConditionNode>) {
+  // TODO: Should provide this, maybe via Context? unstated-next?
+  const tiers = ["tier1", "tier2", "tier3"];
+  return <InputGroup as={Col} sm={cols}>
+  <Form.Control
+    as="select"
+    value={ast.value}
+    onChange={e => {
+      // @ts-ignore
+      const newValue = { ...ast, value: e.target.value };
+      onChange(newValue);
+    }}
+  >
+    <optgroup label="Tiers">
+      {tiers.map(k => (
+        <option key={k} value={k}>
+          {k}
+        </option>
+      ))}
+    </optgroup>
+  </Form.Control>
+</InputGroup>
+}
+
+function ConditionEditor({ ast, onChange }: NodeEditorProps<ConditionNode>) {
+  const flattened = flattenConditions({ ast, onChange });
+  const { pairs } = flattened;
+  const removeLast = () => {
+    // Make the second-to-last condition's else = final else
+    if (pairs.length <= 1) return; // Can't flatten a single-level condition
+    const secondLast = pairs[pairs.length - 2].original;
+    secondLast.onChange({
+      ...secondLast.ast,
+      else: flattened.finalElse.ast
+    });
+  };
+  const addNew = () => {
+    const last = pairs[pairs.length - 1].original;
+    last.onChange({
+      ...last.ast,
+      else: {
+        ...defaultCondition(),
+        else: flattened.finalElse.ast
+      }
+    });
+  };
+  return (
+    <>
+      <Row>
+        <Col sm="9">
+          <h2>Condition</h2>
+        </Col>
+        <Col sm="3">
+          <h2>Then</h2>
+        </Col>
+      </Row>
+      {flattened.pairs.map(pair => {
+        return (
+          <Row>
+            <Col sm="9">
+              <NodeEditor {...pair.condition} />
+            </Col>
+            <NodeEditor {...pair.then} cols="2" />
+          </Row>
+        );
+      })}
+      <Row>
+      <Col sm="4">
+          <ButtonGroup aria-label="Basic example">
+            <Button variant="secondary" onClick={addNew}>
+              Add
+            </Button>
+            <Button variant="secondary" onClick={removeLast}>
+              x Remove Last
+            </Button>
+          </ButtonGroup>
+        </Col>
+        <Col sm="2">
+          <h3>Default</h3>
+        </Col>
+          <NodeEditor {...flattened.finalElse} cols="6" />
+
+      </Row>
     </>
+  );
+}
+
+function UnaryEditor({ast, onChange}: NodeEditorProps<UnaryNode>) {
+  const removeLast = () => {
+    onChange({
+      ...ast,
+      lhs: ast.lhs.slice(0,-1)
+    })
+  };
+  const addNew = () => {
+    const newPair = [
+      defaultString(),
+      defaultComparison()
+    ];
+    onChange({
+      ...ast,
+      lhs:[...ast.lhs, newPair]
+    })
+  };
+  return <>
+  <Table striped bordered hover>
+  <thead>
+    <tr>
+      <th>Key</th>
+      <th>Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    {ast.lhs.map( (pair:[AST,AST], idx:number) =>{
+
+      const changePair = (newAst:AST, side:0|1) => {
+        const newLhs: AST[][] = [...ast.lhs];
+        const newPair = [...pair ];
+        newPair[side] = newAst;
+        newLhs[idx] = newPair;
+        onChange({
+          ...ast,
+          lhs: newLhs
+        });
+      }
+      return <tr>
+      <td><NodeEditor ast={pair[0]} onChange={(newAst) => changePair(newAst,0) } cols="12" /></td>
+      <td><NodeEditor ast={pair[1]} onChange={(newAst) => changePair(newAst,1) } cols="12" /></td>
+    </tr>
+
+    })}
+  </tbody>
+</Table>
+          <ButtonGroup aria-label="Basic example">
+          <Button variant="secondary" onClick={addNew}>
+            Add
+          </Button>
+          <Button variant="secondary" onClick={removeLast}>
+            x Remove Last
+          </Button>
+        </ButtonGroup>
+</>
 }
