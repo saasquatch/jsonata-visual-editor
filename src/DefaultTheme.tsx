@@ -21,6 +21,8 @@ import {
 } from "react-bootstrap";
 import styled from "styled-components";
 
+import ButtonHelp from "./ButtonHelp";
+import PathPicker from "./PathEditor";
 import {
   JsonataASTNode,
   BinaryNode,
@@ -35,7 +37,15 @@ import {
   ArrayUnaryNode
 } from "./jsonata";
 import { NodeEditorProps, Context } from "./AstEditor";
-import { ParsingState } from "./Types";
+import {
+  ParsingState,
+  Modes,
+  Mode,
+  AST,
+  baseOperators,
+  numberOperators,
+  arrayOperators
+} from "./Types";
 
 // import { Theme, Icons } from "./Theme";
 type Callback = () => void;
@@ -356,16 +366,171 @@ function ArrayUnaryEditor({
   );
 }
 
+function LeafValueEditor({
+  ast,
+  onChange,
+  validator,
+  cols = "5",
+  onChangeText,
+  text
+}: NodeEditorProps<LiteralNode> & {
+  text: string;
+  onChangeText: OnChange<string>;
+}) {
+  return (
+    <InputGroup as={Col} sm={cols}>
+      <Form.Control
+        type="text"
+        placeholder="Enter a value"
+        value={text}
+        onChange={e => onChangeText(e.target.value)}
+      />
+      <TypeSwitch ast={ast} onChange={onChange} />
+
+      <Form.Control.Feedback type="invalid">
+        {/* {error.message} */}
+      </Form.Control.Feedback>
+    </InputGroup>
+  );
+}
+
+function PathEditor({
+  ast,
+  onChange,
+  validator,
+  changeType,
+  cols = "5"
+}: NodeEditorProps<PathNode> & {
+  changeType: Callback;
+}) {
+  return (
+    <InputGroup as={Col} sm={cols}>
+      <GrowDiv>
+        <PathPicker value={ast} onChange={option => onChange(option.value)} />
+      </GrowDiv>
+      <TypeSwitch ast={ast} onChange={onChange} changeType={changeType} />
+      <Form.Control.Feedback type="invalid">
+        {/* {parsing.error} */}
+      </Form.Control.Feedback>
+    </InputGroup>
+  );
+}
+
+function Base({
+  toggleMode,
+  toggleBlock,
+  mode,
+  editor
+}: {
+  toggleMode: Callback;
+  toggleBlock: string;
+  mode: Mode;
+  editor: JSX.Element;
+}) {
+  return (
+    <div>
+      <div style={{ float: "right" }}>
+        <ButtonHelp
+          onClick={toggleMode}
+          disabled={toggleBlock}
+          variant="secondary"
+          size="sm"
+          disabledHelp={toggleBlock}
+        >
+          Switch to {mode === Modes.NodeMode ? "Advanced" : "Basic"}
+        </ButtonHelp>
+      </div>
+      {editor}
+    </div>
+  );
+}
+function RootNodeEditor({
+  editor
+}: NodeEditorProps<AST> & {
+  editor: JSX.Element;
+}) {
+  return editor;
+}
+
+function ComparisonEditor({
+  lhs,
+  rhs,
+  changeOperator,
+  ast
+}: NodeEditorProps<BinaryNode> & {
+  lhs: JSX.Element;
+  rhs: JSX.Element;
+  changeOperator: OnChange<string>;
+}) {
+  return (
+    <>
+      <Form.Row>
+        {lhs}
+        <InputGroup as={Col} sm="2">
+          <Form.Control
+            as="select"
+            value={ast.value}
+            onChange={e => changeOperator(e.target.value)}
+          >
+            <optgroup label="Common Operators">
+              {Object.keys(baseOperators).map(k => (
+                <option key={k} value={k}>
+                  {baseOperators[k]}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Number Operators">
+              {Object.keys(numberOperators).map(k => (
+                <option key={k} value={k}>
+                  {numberOperators[k]}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Array Operators">
+              {Object.keys(arrayOperators).map(k => (
+                <option key={k} value={k}>
+                  {arrayOperators[k]}
+                </option>
+              ))}
+            </optgroup>
+          </Form.Control>
+        </InputGroup>
+        {rhs}
+      </Form.Row>
+    </>
+  );
+}
+
 export const DefaultTheme = {
+  /*
+    Base editors
+  */
+  Base,
+  RootNodeEditor,
+  IDETextarea,
+  /*
+    Icons
+  */
   Icon: Icon,
   TypeSwitch,
-  IDETextarea,
+
+  /*
+    Compound editors
+  */
+  ComparisonEditor,
   CombinerEditor,
   BlockEditor,
   ConditionEditor,
   ObjectUnaryEditor,
-  VariableEditor,
   ArrayUnaryEditor,
+
+  /*
+    Leaf editors
+   */
+  VariableEditor,
+  LeafValueEditor,
+  PathEditor,
+
   // TODO: Remove this once Theme migration is done
   AddRemoveGroup
 };

@@ -1,20 +1,10 @@
 import React, { useState } from "react";
 import jsonata from "jsonata";
 
-import {
-  InputGroup,
-  Form,
-  Col,
-  Button,
-  ButtonGroup,
-  Table
-} from "react-bootstrap";
-import styled from "styled-components";
+import { InputGroup, Form, Col, Button, ButtonGroup } from "react-bootstrap";
 
 import { createContainer } from "unstated-next";
 
-import PathPicker from "./PathEditor";
-import ButtonHelp from "./ButtonHelp";
 import { serializer } from "./serializer";
 import {
   JsonataASTNode,
@@ -30,7 +20,20 @@ import {
   ArrayUnaryNode
 } from "./jsonata";
 import { Theme } from "./Theme";
-import { ParsingState } from "./Types";
+import {
+  ParsingState,
+  SchemaProvider,
+  NodeEditorProps,
+  RootNodeEditorProps,
+  ValidatorError,
+  Mode,
+  Modes,
+  combinerOperators,
+  comparionsOperators,
+  numberOperators,
+  baseOperators,
+  arrayOperators
+} from "./Types";
 
 type AST = JsonataASTNode;
 type OnChange<T extends AST = AST> = (ast: T) => void;
@@ -50,32 +53,8 @@ function useEditorContext({
 
 export const Context = createContainer(useEditorContext);
 
-const NodeMode = Symbol("NodeMode");
-const IDEMode = Symbol("IDEMode");
-
 // See all the AST types: https://github.com/mtiller/jsonata/blob/ts-2.0/src/parser/ast.ts
 // const NestedPathValue = jsonata(`$join(steps.value,".")`);
-
-export interface NodeEditorProps<NodeType extends AST> {
-  ast: NodeType;
-  onChange: OnChange;
-  cols?: string; // Number of columns, from 1 to 12. See Grid system in Bootstrap
-  validator?: (ast: NodeType) => ValidatorError;
-}
-
-export interface RootNodeEditorProps extends NodeEditorProps<AST> {
-  schemaProvider?: SchemaProvider;
-  theme: Theme;
-  boundVariables?: string[];
-}
-
-export interface SchemaProvider {
-  getTypeAtPath(ast: AST): string;
-}
-interface ValidatorError {
-  error: string;
-  message: string;
-}
 
 const isNumberNode = (n: AST) => n.type === "number";
 const isPathNode = (n: AST) => n.type === "path";
@@ -108,47 +87,6 @@ function Validators(schemaProvider: SchemaProvider) {
   };
 }
 
-const numberOperators = {
-  ">": "greater than",
-  "<": "less than",
-  "<=": "less than or equal",
-  ">=": "greater than or equal"
-};
-
-const baseOperators = {
-  "=": "equals",
-  "!=": "not equals"
-};
-
-const arrayOperators = {
-  in: "array contains"
-};
-
-const comparionsOperators = {
-  ...baseOperators,
-  ...numberOperators,
-  ...arrayOperators
-};
-
-const combinerOperators = {
-  and: "and",
-  or: "or"
-};
-
-const mathOperators = {
-  "-": "minus",
-  "+": "plus",
-  "*": "times",
-  "/": "divided by",
-  "%": "modulo"
-};
-
-const operators = {
-  ...comparionsOperators,
-  ...mathOperators,
-  ...combinerOperators
-};
-
 function NodeEditor(props: NodeEditorProps<AST>) {
   const { ast, ...rest } = props;
   if (ast.type === "binary") {
@@ -175,66 +113,37 @@ function NodeEditor(props: NodeEditorProps<AST>) {
     throw new Error("Unsupported node type: " + props.ast.type);
   }
 }
-type Mode = Symbol;
 
 export function Editor(props: RootNodeEditorProps) {
   const [mode, setMode] = useState<Mode>(
     // props.ast.type === "binary" ? NodeMode : IDEMode
-    IDEMode
+    Modes.IDEMode as Mode
   );
   const [toggleBlock, setToggleBlock] = useState(null);
 
   let editor =
-    mode === NodeMode ? (
+    mode === Modes.NodeMode ? (
       <RootNodeEditor {...props} />
     ) : (
       <IDEEditor setToggleBlock={setToggleBlock} {...props} />
     );
   function toggleMode() {
-    if (mode === NodeMode) {
-      setMode(IDEMode);
+    if (mode === Modes.NodeMode) {
+      setMode(Modes.IDEMode as Mode);
     } else {
-      setMode(NodeMode);
+      setMode(Modes.NodeMode as Mode);
     }
   }
-  let serializedVersions = [];
-  try {
-    serializedVersions.push(serializer(props.ast));
-  } catch (e) {
-    serializedVersions.push(e.message);
-  }
-  try {
-    const l2 = serializer(jsonata(serializedVersions[0]).ast() as AST);
-    serializedVersions.push(l2);
-  } catch (e) {
-    serializedVersions.push(e.message);
-  }
+
   const { schemaProvider, theme } = props;
   return (
     <Context.Provider initialState={{ schemaProvider, theme }}>
-      <div>
-        <div style={{ float: "right" }}>
-          <ButtonHelp
-            onClick={toggleMode}
-            disabled={toggleBlock}
-            variant="secondary"
-            size="sm"
-            disabledHelp={toggleBlock}
-          >
-            Switch to {mode === NodeMode ? "Advanced" : "Basic"}
-          </ButtonHelp>
-        </div>
-        {editor}
-
-        {/* {mode === NodeMode && ( */}
-        {serializedVersions.map((s, idx) => (
-          <pre key={idx} style={{ marginTop: "20px" }}>
-            {s}
-          </pre>
-        ))}
-
-        {/* )} */}
-      </div>
+      <theme.Base
+        editor={editor}
+        toggleMode={toggleMode}
+        toggleBlock={toggleBlock}
+        mode={mode}
+      />
     </Context.Provider>
   );
 }
@@ -265,7 +174,7 @@ function useIDEHook({
       error: ""
     });
     setImmediate(async () => {
-      let newAst;
+      let newAst: AST;
       let error = undefined;
       try {
         newAst = jsonata(newText).ast();
@@ -378,7 +287,12 @@ function isValidBasicExpression(newValue: AST) {
   return "Can't use basic editor for advanced expressions. Try a simpler expression.";
 }
 
-function newBinaryAdder(type, ast, onChange, nested = false) {
+function newBinaryAdder(
+  type: string,
+  ast: AST,
+  onChange: (ast: AST) => void,
+  nested = false
+) {
   return () =>
     onChange({
       type: "binary",
@@ -389,33 +303,9 @@ function newBinaryAdder(type, ast, onChange, nested = false) {
 }
 
 function RootNodeEditor(props: NodeEditorProps<AST>) {
-  return (
-    <>
-      <NodeEditor {...props} />
-      {isCombinerNode(props.ast) && (
-        <ButtonGroup>
-          <Button
-            variant="secondary"
-            onClick={newBinaryAdder("and", props.ast, props.onChange)}
-          >
-            + And
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={newBinaryAdder("or", props.ast, props.onChange)}
-          >
-            + Or
-          </Button>
-        </ButtonGroup>
-      )}
-    </>
-  );
-}
-
-function isCombinerNode(ast: AST) {
-  return (
-    ast.type === "binary" && Object.keys(combinerOperators).includes(ast.value)
-  );
+  const { theme } = Context.useContainer();
+  const editor = <NodeEditor {...props} />;
+  return <theme.RootNodeEditor {...props} editor={editor} />;
 }
 
 function BinaryEditor(props: NodeEditorProps<BinaryNode>) {
@@ -438,36 +328,45 @@ function ComparisonEditor(props: NodeEditorProps<BinaryNode>) {
   const validator = Object.keys(numberOperators).includes(props.ast.value)
     ? Validators(schemaProvider).onlyNumberValidator
     : null;
+
+  const changeOperator = (value: string) => {
+    const newValue = { ...props.ast, value: value };
+    const swap = ast => {
+      return { ...ast, lhs: ast.rhs, rhs: ast.lhs };
+    };
+    if (props.ast.value === "in" && newValue.value !== "in") {
+      // do swap
+      props.onChange(swap(newValue));
+    } else if (newValue.value === "in" && props.ast.value !== "in") {
+      // do swap
+      props.onChange(swap(newValue));
+    } else {
+      props.onChange(newValue);
+    }
+  };
+  const lhs = (
+    <NodeEditor
+      ast={props.ast[leftKey]}
+      onChange={newAst => props.onChange({ ...props.ast, [leftKey]: newAst })}
+      validator={validator}
+    />
+  );
+  const rhs = (
+    <NodeEditor
+      ast={props.ast[rightKey]}
+      onChange={newAst => props.onChange({ ...props.ast, [rightKey]: newAst })}
+      validator={validator}
+    />
+  );
   return (
     <>
       <Form.Row>
-        <NodeEditor
-          ast={props.ast[leftKey]}
-          onChange={newAst =>
-            props.onChange({ ...props.ast, [leftKey]: newAst })
-          }
-          validator={validator}
-        />
+        {lhs}
         <InputGroup as={Col} sm="2">
           <Form.Control
             as="select"
             value={props.ast.value}
-            onChange={e => {
-              // @ts-ignore
-              const newValue = { ...props.ast, value: e.target.value };
-              const swap = ast => {
-                return { ...ast, lhs: ast.rhs, rhs: ast.lhs };
-              };
-              if (props.ast.value === "in" && newValue.value !== "in") {
-                // do swap
-                props.onChange(swap(newValue));
-              } else if (newValue.value === "in" && props.ast.value !== "in") {
-                // do swap
-                props.onChange(swap(newValue));
-              } else {
-                props.onChange(newValue);
-              }
-            }}
+            onChange={e => changeOperator(e.target.value)}
           >
             <optgroup label="Common Operators">
               {Object.keys(baseOperators).map(k => (
@@ -492,13 +391,7 @@ function ComparisonEditor(props: NodeEditorProps<BinaryNode>) {
             </optgroup>
           </Form.Control>
         </InputGroup>
-        <NodeEditor
-          ast={props.ast[rightKey]}
-          onChange={newAst =>
-            props.onChange({ ...props.ast, [rightKey]: newAst })
-          }
-          validator={validator}
-        />
+        {rhs}
       </Form.Row>
     </>
   );
@@ -508,7 +401,7 @@ function flattenBinaryNodesThatMatch({
   ast,
   onChange,
   parentType
-}): NodeEditorProps[] {
+}): NodeEditorProps<AST>[] {
   if (ast.type === "binary" && ast.value === parentType) {
     // Flatten
     return [
@@ -572,7 +465,7 @@ function CombinerEditor(props: CombinerProps) {
       })
     );
   const children = flattenedBinaryNodes.map(c => (
-    <NodeEditor key={c} ast={c.ast} onChange={c.onChange} />
+    <NodeEditor ast={c.ast} onChange={c.onChange} />
   ));
 
   return (
@@ -587,35 +480,22 @@ function CombinerEditor(props: CombinerProps) {
   );
 }
 
-const GrowDiv = styled.div`
-  flex-basis: auto;
-  flex-grow: 1;
-  flex-shrink: 1;
-`;
-
 function PathEditor({
   ast,
   onChange,
   validator,
   cols = "5"
 }: NodeEditorProps<PathNode>) {
-  // async function validator(ast) {
-  //   if (ast.type !== "path") {
-  //     throw new Error("Only paths are supported");
-  //   }
-  //   return true;
-  // }
-  // const [text, textChange, parsing] = useIDEHook({ ast, onChange, validator });
+  const { theme } = Context.useContainer();
+  const changeType = () => onChange(nextAst(ast));
+
   return (
-    <InputGroup as={Col} sm={cols}>
-      <GrowDiv>
-        <PathPicker value={ast} onChange={option => onChange(option.value)} />
-      </GrowDiv>
-      <TypeSwitch ast={ast} onChange={onChange} />
-      <Form.Control.Feedback type="invalid">
-        {/* {parsing.error} */}
-      </Form.Control.Feedback>
-    </InputGroup>
+    <theme.PathEditor
+      ast={ast}
+      changeType={changeType}
+      cols={cols}
+      onChange={onChange}
+    />
   );
 }
 
@@ -703,22 +583,18 @@ function CoercibleValueEditor({
   validator,
   cols = "5"
 }: NodeEditorProps<LiteralNode>) {
+  const { theme } = Context.useContainer();
   // let error = validator && validator(ast);
-
+  const text = toEditableText(ast);
+  const onChangeText = (newText: string) => onChange(autoCoerce(newText));
   return (
-    <InputGroup as={Col} sm={cols}>
-      <Form.Control
-        type="text"
-        placeholder="Enter a value"
-        value={toEditableText(ast)}
-        onChange={e => onChange(autoCoerce(e.target.value))}
-      />
-      <TypeSwitch ast={ast} onChange={onChange} />
-
-      <Form.Control.Feedback type="invalid">
-        {/* {error.message} */}
-      </Form.Control.Feedback>
-    </InputGroup>
+    <theme.LeafValueEditor
+      ast={ast}
+      text={text}
+      onChange={onChange}
+      onChangeText={onChangeText}
+      cols={cols}
+    />
   );
 }
 
@@ -994,7 +870,6 @@ function ArrayUnaryEditor({ ast, onChange }: NodeEditorProps<ArrayUnaryNode>) {
         ...ast,
         expressions: newExpr
       });
-      //TODO: Implement me
     };
     return { editor, remove };
   });
