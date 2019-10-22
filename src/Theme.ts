@@ -1,4 +1,4 @@
 import React from "react";
-import { DefaultTheme, DefaultIcons } from "./DefaultTheme";
+import { DefaultTheme } from "./DefaultTheme";
 
 export type Theme = typeof DefaultTheme;
