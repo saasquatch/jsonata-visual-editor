@@ -284,6 +284,78 @@ function ObjectUnaryEditor({
     </>
   );
 }
+
+function VariableEditor({
+  ast,
+  onChange,
+  cols = "5",
+  boundVariables
+}: NodeEditorProps<VariableNode> & {
+  boundVariables: string[];
+}) {
+  return (
+    <InputGroup as={Col} sm={cols}>
+      <Form.Control
+        as="select"
+        value={ast.value}
+        onChange={e => {
+          // @ts-ignore
+          const newValue = { ...ast, value: e.target.value };
+          onChange(newValue);
+        }}
+      >
+        {boundVariables.map(k => (
+          <option key={k} value={k}>
+            {k}
+          </option>
+        ))}
+      </Form.Control>
+    </InputGroup>
+  );
+}
+
+function ArrayUnaryEditor({
+  children,
+  addNew,
+  removeLast
+}: NodeEditorProps<ArrayUnaryNode> & {
+  children: {
+    editor: JSX.Element;
+    remove: Callback;
+  }[];
+  addNew: Callback;
+  removeLast: Callback;
+}) {
+  const canDelete = children.length > 1;
+  return (
+    <>
+      <Table striped bordered hover>
+        <thead>
+          <tr>
+            <th>Value</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {children.map(c => {
+            return (
+              <tr>
+                <td>{c.editor}</td>
+                <td>
+                  <Button onClick={c.remove} disabled={!canDelete}>
+                    X
+                  </Button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </Table>
+      <AddRemoveGroup addNew={addNew} removeLast={removeLast} />
+    </>
+  );
+}
+
 export const DefaultTheme = {
   Icon: Icon,
   TypeSwitch,
@@ -292,6 +364,8 @@ export const DefaultTheme = {
   BlockEditor,
   ConditionEditor,
   ObjectUnaryEditor,
+  VariableEditor,
+  ArrayUnaryEditor,
   // TODO: Remove this once Theme migration is done
   AddRemoveGroup
 };

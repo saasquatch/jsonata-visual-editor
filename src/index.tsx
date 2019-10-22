@@ -10,7 +10,7 @@ const set = jsonata(`[Q = 0, Q = 1, Q = 3]`).ast();
 const obj = jsonata(`{"one":Q = 0, "two": Q = 1,  "three": Q = 3}`).ast();
 const cond = jsonata(`Q = 0 ? "one" : Q =1 ? "two" : "three"`).ast();
 
-const defaultAst = obj;
+const defaultAst = set;
 const introspection = jsonata(`**[type="name"].value`);
 
 function App() {

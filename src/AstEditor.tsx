@@ -35,9 +35,17 @@ import { ParsingState } from "./Types";
 type AST = JsonataASTNode;
 type OnChange<T extends AST = AST> = (ast: T) => void;
 
-type Container = { schemaProvider?: SchemaProvider; theme: Theme };
-function useEditorContext({ schemaProvider, theme }: Container) {
-  return { schemaProvider, theme, NodeEditor };
+type Container = {
+  schemaProvider?: SchemaProvider;
+  theme: Theme;
+  boundVariables?: string[];
+};
+function useEditorContext({
+  schemaProvider,
+  theme,
+  boundVariables
+}: Container) {
+  return { schemaProvider, theme, boundVariables };
 }
 
 export const Context = createContainer(useEditorContext);
@@ -54,10 +62,13 @@ export interface NodeEditorProps<NodeType extends AST> {
   cols?: string; // Number of columns, from 1 to 12. See Grid system in Bootstrap
   validator?: (ast: NodeType) => ValidatorError;
 }
+
 export interface RootNodeEditorProps extends NodeEditorProps<AST> {
   schemaProvider?: SchemaProvider;
   theme: Theme;
+  boundVariables?: string[];
 }
+
 export interface SchemaProvider {
   getTypeAtPath(ast: AST): string;
 }
@@ -812,28 +823,14 @@ function VariableEditor({
   onChange,
   cols = "5"
 }: NodeEditorProps<VariableNode>) {
-  // TODO: Should provide this, maybe via Context? unstated-next?
-  const tiers = ["tier1", "tier2", "tier3"];
+  const { theme, boundVariables = [] } = Context.useContainer();
   return (
-    <InputGroup as={Col} sm={cols}>
-      <Form.Control
-        as="select"
-        value={ast.value}
-        onChange={e => {
-          // @ts-ignore
-          const newValue = { ...ast, value: e.target.value };
-          onChange(newValue);
-        }}
-      >
-        <optgroup label="Tiers">
-          {tiers.map(k => (
-            <option key={k} value={k}>
-              {k}
-            </option>
-          ))}
-        </optgroup>
-      </Form.Control>
-    </InputGroup>
+    <theme.VariableEditor
+      ast={ast}
+      cols={cols}
+      onChange={onChange}
+      boundVariables={boundVariables}
+    />
   );
 }
 
@@ -955,7 +952,14 @@ function ObjectUnaryEditor({
   );
 }
 
+// Copies an array with an element missing, see: https://jaketrent.com/post/remove-array-element-without-mutating/
+function withoutIndex<T>(arr: T[], idx: number) {
+  return [...arr.slice(0, idx), ...arr.slice(idx + 1)];
+}
+
 function ArrayUnaryEditor({ ast, onChange }: NodeEditorProps<ArrayUnaryNode>) {
+  const { theme } = Context.useContainer();
+
   const removeLast = () => {
     onChange({
       ...ast,
@@ -968,40 +972,40 @@ function ArrayUnaryEditor({ ast, onChange }: NodeEditorProps<ArrayUnaryNode>) {
       expressions: [...ast.expressions, defaultComparison()]
     });
   };
-  const { theme } = Context.useContainer();
+  const children = ast.expressions.map((expr: AST, idx: number) => {
+    const changePair = (newAst: AST) => {
+      const newExpr: AST[] = [...ast.expressions];
+      newExpr[idx] = newAst;
+      onChange({
+        ...ast,
+        expressions: newExpr
+      });
+    };
+    const editor = (
+      <NodeEditor
+        ast={expr}
+        onChange={newAst => changePair(newAst)}
+        cols="12"
+      />
+    );
+    const remove = () => {
+      const newExpr: AST[] = withoutIndex(ast.expressions, idx);
+      onChange({
+        ...ast,
+        expressions: newExpr
+      });
+      //TODO: Implement me
+    };
+    return { editor, remove };
+  });
+
   return (
-    <>
-      <Table striped bordered hover>
-        <thead>
-          <tr>
-            <th>Value</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ast.expressions.map((expr: AST, idx: number) => {
-            const changePair = (newAst: AST) => {
-              const newExpr: AST[] = [...ast.expressions];
-              newExpr[idx] = newAst;
-              onChange({
-                ...ast,
-                expressions: newExpr
-              });
-            };
-            return (
-              <tr>
-                <td>
-                  <NodeEditor
-                    ast={expr}
-                    onChange={newAst => changePair(newAst)}
-                    cols="12"
-                  />
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </Table>
-      <theme.AddRemoveGroup addNew={addNew} removeLast={removeLast} />
-    </>
+    <theme.ArrayUnaryEditor
+      ast={ast}
+      onChange={onChange}
+      children={children}
+      addNew={addNew}
+      removeLast={removeLast}
+    />
   );
 }
