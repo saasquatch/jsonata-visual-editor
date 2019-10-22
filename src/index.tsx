@@ -4,12 +4,13 @@ import jsonata from "jsonata";
 
 import { Editor } from "./AstEditor";
 import { ErrorBoundary } from "./ErrorBoundary";
+import { DefaultTheme } from "./DefaultTheme";
 
 const set = jsonata(`[Q = 0, Q = 1, Q = 3]`).ast();
 const obj = jsonata(`{"one":Q = 0, "two": Q = 1,  "three": Q = 3}`).ast();
 const cond = jsonata(`Q = 0 ? "one" : Q =1 ? "two" : "three"`).ast();
 
-const defaultAst = cond;
+const defaultAst = obj;
 const introspection = jsonata(`**[type="name"].value`);
 
 function App() {
@@ -30,7 +31,7 @@ function App() {
         />
         <button onClick={toAst}>-></button>
       </div> */}
-      <Editor ast={ast} onChange={setAst} />
+      <Editor ast={ast} onChange={setAst} theme={DefaultTheme} />
       <div style={{ marginTop: "500px" }}>
         <pre>
           Keys used: {JSON.stringify(keys, null, 2)} {typeof keys} <br />

@@ -1,27 +1,16 @@
 import React, { useState } from "react";
 import jsonata from "jsonata";
-import styled from "styled-components";
+
 import {
   InputGroup,
   Form,
   Col,
-  Row,
   Button,
   ButtonGroup,
-  OverlayTrigger,
-  Table,
-  Tooltip
+  Table
 } from "react-bootstrap";
-import {
-  AntDesignOutline,
-  DashboardOutline,
-  FontSizeOutline,
-  NumberOutline,
-  TableOutline,
-  CloseCircleOutline,
-  CheckSquareOutline
-} from "@ant-design/icons";
-import AntdIcon from "@ant-design/icons-react";
+import styled from "styled-components";
+
 import { createContainer } from "unstated-next";
 
 import PathPicker from "./PathEditor";
@@ -40,31 +29,18 @@ import {
   ObjectUnaryNode,
   ArrayUnaryNode
 } from "./jsonata";
+import { Theme } from "./Theme";
+import { ParsingState } from "./Types";
 
 type AST = JsonataASTNode;
 type OnChange<T extends AST = AST> = (ast: T) => void;
 
-AntdIcon.add(
-  AntDesignOutline,
-  DashboardOutline,
-  FontSizeOutline,
-  NumberOutline,
-  CloseCircleOutline
-);
-const Icon = AntdIcon;
-
-const Inset = styled.div`
-  border-left: 10px solid #eee;
-`;
-const InlineError = styled.div`
-  color: red;
-`;
-
-type Container = {schemaProvider?:SchemaProvider};
-function useEditorContext({schemaProvider}:Container = {}) {
-  return {schemaProvider}
+type Container = { schemaProvider?: SchemaProvider; theme: Theme };
+function useEditorContext({ schemaProvider, theme }: Container) {
+  return { schemaProvider, theme, NodeEditor };
 }
-const Context = createContainer(useEditorContext);
+
+export const Context = createContainer(useEditorContext);
 
 const NodeMode = Symbol("NodeMode");
 const IDEMode = Symbol("IDEMode");
@@ -80,6 +56,7 @@ export interface NodeEditorProps<NodeType extends AST> {
 }
 export interface RootNodeEditorProps extends NodeEditorProps<AST> {
   schemaProvider?: SchemaProvider;
+  theme: Theme;
 }
 export interface SchemaProvider {
   getTypeAtPath(ast: AST): string;
@@ -92,7 +69,7 @@ interface ValidatorError {
 const isNumberNode = (n: AST) => n.type === "number";
 const isPathNode = (n: AST) => n.type === "path";
 
-function Validators(schemaProvider:SchemaProvider) {
+function Validators(schemaProvider: SchemaProvider) {
   return {
     onlyNumberValidator(ast: AST) {
       let error: ValidatorError;
@@ -221,9 +198,9 @@ export function Editor(props: RootNodeEditorProps) {
   } catch (e) {
     serializedVersions.push(e.message);
   }
-  const {schemaProvider} = props;
+  const { schemaProvider, theme } = props;
   return (
-    <Context.Provider initialState={{schemaProvider}}>
+    <Context.Provider initialState={{ schemaProvider, theme }}>
       <div>
         <div style={{ float: "right" }}>
           <ButtonHelp
@@ -257,10 +234,6 @@ type IDEHookProps = {
   validator?: (ast: AST) => Promise<boolean>;
   setError: (error: any) => void;
 };
-interface ParsingState {
-  inProgress: boolean;
-  error?: string;
-}
 function useIDEHook({
   ast,
   onChange,
@@ -312,6 +285,7 @@ type IDEEditorProps = NodeEditorProps<AST> & {
   setToggleBlock: (text: string | null) => void;
 };
 export function IDEEditor({ ast, onChange, setToggleBlock }: IDEEditorProps) {
+  const { theme } = Context.useContainer();
   const [text, textChange, parsing] = useIDEHook({
     ast,
     onChange: newValue => {
@@ -324,20 +298,7 @@ export function IDEEditor({ ast, onChange, setToggleBlock }: IDEEditorProps) {
     }
   });
   return (
-    <div>
-      <Form.Control
-        as="textarea"
-        rows="3"
-        value={text}
-        onChange={e => /** @ts-ignore */ textChange(e.target.value)}
-      />
-      <br />
-      {parsing.inProgress ? (
-        "Parsing..."
-      ) : (
-        <InlineError>{parsing.error}</InlineError>
-      )}
-    </div>
+    <theme.IDETextarea text={text} textChange={textChange} parsing={parsing} />
   );
 }
 function defaultPath(): PathNode {
@@ -457,7 +418,7 @@ function BinaryEditor(props: NodeEditorProps<BinaryNode>) {
 }
 
 function ComparisonEditor(props: NodeEditorProps<BinaryNode>) {
-  const {schemaProvider} = Context.useContainer();
+  const { schemaProvider } = Context.useContainer();
 
   const shouldSwap = ({ ast }) => ast.value === "in";
   const swap = shouldSwap(props);
@@ -532,7 +493,11 @@ function ComparisonEditor(props: NodeEditorProps<BinaryNode>) {
   );
 }
 
-function flattenBinaryNodesThatMatch({ ast, onChange, parentType }) {
+function flattenBinaryNodesThatMatch({
+  ast,
+  onChange,
+  parentType
+}): NodeEditorProps[] {
   if (ast.type === "binary" && ast.value === parentType) {
     // Flatten
     return [
@@ -577,6 +542,7 @@ function buildFlattenedBinaryValueSwap({ ast, parentType, newValue }) {
 type CombinerProps = NodeEditorProps<BinaryNode>;
 
 function CombinerEditor(props: CombinerProps) {
+  const { theme } = Context.useContainer();
   const flattenedBinaryNodes = flattenBinaryNodesThatMatch({
     ast: props.ast,
     onChange: props.onChange,
@@ -585,42 +551,28 @@ function CombinerEditor(props: CombinerProps) {
   const removeLast = () => props.onChange(props.ast.lhs);
   const addNew = newBinaryAdder(props.ast.value, props.ast, props.onChange);
 
-  return (
-    <Inset>
-      <Form.Row>
-        <InputGroup as={Col} sm="2">
-          <Form.Control
-            as="select"
-            value={props.ast.value}
-            onChange={e =>
-              props.onChange(
-                buildFlattenedBinaryValueSwap({
-                  ast: props.ast,
-                  // @ts-ignore
-                  newValue: e.target.value,
-                  parentType: props.ast.value
-                })
-              )
-            }
-          >
-            {Object.keys(combinerOperators).map(k => (
-              <option key={k} value={k}>
-                {combinerOperators[k]}
-              </option>
-            ))}
-          </Form.Control>
-        </InputGroup>
-        <Col sm="10">
-          {flattenedBinaryNodes.map(c => (
-            <Form.Row>
-              <NodeEditor ast={c.ast} onChange={c.onChange} />
-            </Form.Row>
-          ))}
+  const onChange = (val: AST) =>
+    props.onChange(
+      buildFlattenedBinaryValueSwap({
+        ast: props.ast,
+        // @ts-ignore
+        newValue: val,
+        parentType: props.ast.value
+      })
+    );
+  const children = flattenedBinaryNodes.map(c => (
+    <NodeEditor key={c} ast={c.ast} onChange={c.onChange} />
+  ));
 
-          <AddRemoveGroup addNew={addNew} removeLast={removeLast} />
-        </Col>
-      </Form.Row>
-    </Inset>
+  return (
+    <theme.CombinerEditor
+      children={children}
+      ast={props.ast}
+      onChange={onChange}
+      removeLast={removeLast}
+      addNew={addNew}
+      combinerOperators={combinerOperators}
+    />
   );
 }
 
@@ -655,20 +607,6 @@ function PathEditor({
     </InputGroup>
   );
 }
-
-const IconMap = {
-  number: NumberOutline,
-  string: FontSizeOutline,
-  path: TableOutline,
-  value: CheckSquareOutline
-};
-
-const DescriptionMap = {
-  number: "We'll compare this as a number. Click to change.",
-  string: "We'll compare this as a string. Click to change.",
-  path: "We'll use this as a variable name. Click to change.",
-  value: " We'll compare this as a boolean. Click to change."
-};
 
 function nextAst(ast: AST) {
   if (ast.type !== "path") {
@@ -741,20 +679,10 @@ function TypeSwitch({
   ast,
   onChange
 }: NodeEditorProps<LiteralNode | PathNode>) {
+  const changeType = () => onChange(nextAst(ast));
+  const { theme } = Context.useContainer();
   return (
-    <OverlayTrigger
-      trigger="hover"
-      placement="top"
-      overlay={
-        <Tooltip id="todo: needs global id">{DescriptionMap[ast.type]}</Tooltip>
-      }
-    >
-      <InputGroup.Prepend>
-        <InputGroup.Text onClick={() => onChange(nextAst(ast))}>
-          <Icon type={IconMap[ast.type]} />
-        </InputGroup.Text>
-      </InputGroup.Prepend>
-    </OverlayTrigger>
+    <theme.TypeSwitch ast={ast} onChange={onChange} changeType={changeType} />
   );
 }
 
@@ -784,22 +712,25 @@ function CoercibleValueEditor({
 }
 
 function BlockEditor({ ast, onChange }: NodeEditorProps<BlockNode>) {
+  const { theme } = Context.useContainer();
+
+  const children = ast.expressions.map((exp, idx) => (
+    <NodeEditor
+      key={exp}
+      ast={exp}
+      onChange={newAst => {
+        const newExpressions: AST[] = [...ast.expressions];
+        newExpressions[idx] = newAst;
+        onChange({
+          ...ast,
+          expressions: newExpressions
+        });
+      }}
+    />
+  ));
+
   return (
-    <Inset>
-      {ast.expressions.map((exp, idx) => (
-        <NodeEditor
-          ast={exp}
-          onChange={newAst => {
-            const newExpressions: AST[] = [...ast.expressions];
-            newExpressions[idx] = newAst;
-            onChange({
-              ...ast,
-              expressions: newExpressions
-            });
-          }}
-        />
-      ))}
-    </Inset>
+    <theme.BlockEditor ast={ast} onChange={onChange} children={children} />
   );
 }
 
@@ -907,6 +838,8 @@ function VariableEditor({
 }
 
 function ConditionEditor({ ast, onChange }: NodeEditorProps<ConditionNode>) {
+  const { theme } = Context.useContainer();
+
   const flattened = flattenConditions({ ast, onChange });
   const { pairs } = flattened;
   const removeLast = () => {
@@ -929,54 +862,31 @@ function ConditionEditor({ ast, onChange }: NodeEditorProps<ConditionNode>) {
     });
   };
 
-  const remove = (ast: ConditionNode, onChange: OnChange) => onChange(ast.else);
+  const removeAst = (ast: ConditionNode, onChange: OnChange) =>
+    onChange(ast.else);
 
-  const canDelete = flattened.pairs.length > 1;
+  const children = flattened.pairs.map(pair => {
+    const Then = <NodeEditor {...pair.then} cols="12" />;
+    const Condition = <NodeEditor {...pair.condition} cols="12" />;
+    const remove = () => removeAst(pair.original.ast, pair.original.onChange);
+    return {
+      Then,
+      Condition,
+      remove
+    };
+  });
+
+  const elseEditor = <NodeEditor {...flattened.finalElse} cols="6" />;
+
   return (
-    <>
-      <Table striped bordered hover>
-        <thead>
-          <tr>
-            <th>Then</th>
-            <th>Condition</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {flattened.pairs.map(pair => {
-            return (
-              <tr>
-                <td>
-                  <NodeEditor {...pair.then} cols="12" />
-                </td>
-                <td>
-                  <NodeEditor {...pair.condition} />
-                </td>
-                <td>
-                  <Button
-                    onClick={() =>
-                      remove(pair.original.ast, pair.original.onChange)
-                    }
-                    disabled={!canDelete}
-                  >
-                    x
-                  </Button>
-                </td>
-              </tr>
-            );
-          })}
-          <tr>
-            <td>
-              <AddRemoveGroup addNew={addNew} removeLast={removeLast} />
-            </td>
-            <td>
-              Default:
-              <NodeEditor {...flattened.finalElse} cols="6" />
-            </td>
-          </tr>
-        </tbody>
-      </Table>
-    </>
+    <theme.ConditionEditor
+      ast={ast}
+      onChange={onChange}
+      children={children}
+      elseEditor={elseEditor}
+      addNew={addNew}
+      removeLast={removeLast}
+    />
   );
 }
 
@@ -984,6 +894,8 @@ function ObjectUnaryEditor({
   ast,
   onChange
 }: NodeEditorProps<ObjectUnaryNode>) {
+  const { theme } = Context.useContainer();
+
   const removeLast = () => {
     onChange({
       ...ast,
@@ -997,60 +909,49 @@ function ObjectUnaryEditor({
       lhs: [...ast.lhs, newPair]
     });
   };
-  const remove = (idx: number) =>
+  const removeIndex = (idx: number) =>
     onChange({
       ...ast,
       lhs: ast.lhs.filter((_, i) => i !== idx)
     });
 
+  const children = ast.lhs.map((pair: [AST, AST], idx: number) => {
+    const changePair = (newAst: AST, side: 0 | 1) => {
+      const newLhs: AST[][] = [...ast.lhs];
+      const newPair = [...pair];
+      newPair[side] = newAst;
+      newLhs[idx] = newPair;
+      onChange({
+        ...ast,
+        lhs: newLhs
+      });
+    };
+    const key = (
+      <NodeEditor
+        ast={pair[0]}
+        onChange={newAst => changePair(newAst, 0)}
+        cols="12"
+      />
+    );
+    const value = (
+      <NodeEditor
+        ast={pair[1]}
+        onChange={newAst => changePair(newAst, 1)}
+        cols="12"
+      />
+    );
+    const remove = () => removeIndex(idx);
+    return { key, value, remove }; // as const
+  });
+
   return (
-    <>
-      <Table striped bordered hover>
-        <thead>
-          <tr>
-            <th>Key</th>
-            <th>Value</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {ast.lhs.map((pair: [AST, AST], idx: number) => {
-            const changePair = (newAst: AST, side: 0 | 1) => {
-              const newLhs: AST[][] = [...ast.lhs];
-              const newPair = [...pair];
-              newPair[side] = newAst;
-              newLhs[idx] = newPair;
-              onChange({
-                ...ast,
-                lhs: newLhs
-              });
-            };
-            return (
-              <tr>
-                <td>
-                  <NodeEditor
-                    ast={pair[0]}
-                    onChange={newAst => changePair(newAst, 0)}
-                    cols="12"
-                  />
-                </td>
-                <td>
-                  <NodeEditor
-                    ast={pair[1]}
-                    onChange={newAst => changePair(newAst, 1)}
-                    cols="12"
-                  />
-                </td>
-                <td>
-                  <Button onClick={() => remove(idx)}>X</Button>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </Table>
-      <AddRemoveGroup addNew={addNew} removeLast={removeLast} />
-    </>
+    <theme.ObjectUnaryEditor
+      ast={ast}
+      onChange={onChange}
+      children={children}
+      addNew={addNew}
+      removeLast={removeLast}
+    />
   );
 }
 
@@ -1067,6 +968,7 @@ function ArrayUnaryEditor({ ast, onChange }: NodeEditorProps<ArrayUnaryNode>) {
       expressions: [...ast.expressions, defaultComparison()]
     });
   };
+  const { theme } = Context.useContainer();
   return (
     <>
       <Table striped bordered hover>
@@ -1099,25 +1001,7 @@ function ArrayUnaryEditor({ ast, onChange }: NodeEditorProps<ArrayUnaryNode>) {
           })}
         </tbody>
       </Table>
-      <AddRemoveGroup addNew={addNew} removeLast={removeLast} />
+      <theme.AddRemoveGroup addNew={addNew} removeLast={removeLast} />
     </>
-  );
-}
-
-type Callback = () => void;
-type AddRemoveGroupProps = {
-  addNew: Callback;
-  removeLast: Callback;
-};
-function AddRemoveGroup({ addNew, removeLast }: AddRemoveGroupProps) {
-  return (
-    <ButtonGroup>
-      <Button variant="secondary" onClick={addNew}>
-        Add
-      </Button>
-      <Button variant="secondary" onClick={removeLast}>
-        x Remove Last
-      </Button>
-    </ButtonGroup>
   );
 }
