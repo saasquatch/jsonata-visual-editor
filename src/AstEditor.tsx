@@ -22,6 +22,7 @@ import {
   CheckSquareOutline
 } from "@ant-design/icons";
 import AntdIcon from "@ant-design/icons-react";
+import { createContainer } from "unstated-next";
 
 import PathPicker from "./PathEditor";
 import ButtonHelp from "./ButtonHelp";
@@ -59,17 +60,29 @@ const InlineError = styled.div`
   color: red;
 `;
 
+type Container = {schemaProvider?:SchemaProvider};
+function useEditorContext({schemaProvider}:Container = {}) {
+  return {schemaProvider}
+}
+const Context = createContainer(useEditorContext);
+
 const NodeMode = Symbol("NodeMode");
 const IDEMode = Symbol("IDEMode");
 
 // See all the AST types: https://github.com/mtiller/jsonata/blob/ts-2.0/src/parser/ast.ts
 // const NestedPathValue = jsonata(`$join(steps.value,".")`);
 
-interface NodeEditorProps<NodeType extends AST> {
+export interface NodeEditorProps<NodeType extends AST> {
   ast: NodeType;
   onChange: OnChange;
   cols?: string; // Number of columns, from 1 to 12. See Grid system in Bootstrap
   validator?: (ast: NodeType) => ValidatorError;
+}
+export interface RootNodeEditorProps extends NodeEditorProps<AST> {
+  schemaProvider?: SchemaProvider;
+}
+export interface SchemaProvider {
+  getTypeAtPath(ast: AST): string;
 }
 interface ValidatorError {
   error: string;
@@ -79,7 +92,7 @@ interface ValidatorError {
 const isNumberNode = (n: AST) => n.type === "number";
 const isPathNode = (n: AST) => n.type === "path";
 
-function Validators(schemaProvider) {
+function Validators(schemaProvider:SchemaProvider) {
   return {
     onlyNumberValidator(ast: AST) {
       let error: ValidatorError;
@@ -176,7 +189,7 @@ function NodeEditor(props: NodeEditorProps<AST>) {
 }
 type Mode = Symbol;
 
-export function Editor(props: NodeEditorProps<AST>) {
+export function Editor(props: RootNodeEditorProps) {
   const [mode, setMode] = useState<Mode>(
     // props.ast.type === "binary" ? NodeMode : IDEMode
     IDEMode
@@ -208,31 +221,33 @@ export function Editor(props: NodeEditorProps<AST>) {
   } catch (e) {
     serializedVersions.push(e.message);
   }
-
+  const {schemaProvider} = props;
   return (
-    <div>
-      <div style={{ float: "right" }}>
-        <ButtonHelp
-          onClick={toggleMode}
-          disabled={toggleBlock}
-          variant="secondary"
-          size="sm"
-          disabledHelp={toggleBlock}
-        >
-          Switch to {mode === NodeMode ? "Advanced" : "Basic"}
-        </ButtonHelp>
+    <Context.Provider initialState={{schemaProvider}}>
+      <div>
+        <div style={{ float: "right" }}>
+          <ButtonHelp
+            onClick={toggleMode}
+            disabled={toggleBlock}
+            variant="secondary"
+            size="sm"
+            disabledHelp={toggleBlock}
+          >
+            Switch to {mode === NodeMode ? "Advanced" : "Basic"}
+          </ButtonHelp>
+        </div>
+        {editor}
+
+        {/* {mode === NodeMode && ( */}
+        {serializedVersions.map((s, idx) => (
+          <pre key={idx} style={{ marginTop: "20px" }}>
+            {s}
+          </pre>
+        ))}
+
+        {/* )} */}
       </div>
-      {editor}
-
-      {/* {mode === NodeMode && ( */}
-      {serializedVersions.map((s, idx) => (
-        <pre key={idx} style={{ marginTop: "20px" }}>
-          {s}
-        </pre>
-      ))}
-
-      {/* )} */}
-    </div>
+    </Context.Provider>
   );
 }
 
@@ -442,12 +457,14 @@ function BinaryEditor(props: NodeEditorProps<BinaryNode>) {
 }
 
 function ComparisonEditor(props: NodeEditorProps<BinaryNode>) {
+  const {schemaProvider} = Context.useContainer();
+
   const shouldSwap = ({ ast }) => ast.value === "in";
   const swap = shouldSwap(props);
   const leftKey = !swap ? "lhs" : "rhs";
   const rightKey = !swap ? "rhs" : "lhs";
   const validator = Object.keys(numberOperators).includes(props.ast.value)
-    ? Validators(props.schemaProvider).onlyNumberValidator
+    ? Validators(schemaProvider).onlyNumberValidator
     : null;
   return (
     <>
@@ -676,7 +693,7 @@ function isNumber(str: string) {
   return !isNaN(str) && !isNaN(parseFloat(str));
 }
 
-function autoCoerce(newValue: string):AST {
+function autoCoerce(newValue: string): AST {
   const cleanVal = newValue.trim().toLowerCase();
   if (isNumber(newValue)) {
     return {
@@ -912,9 +929,9 @@ function ConditionEditor({ ast, onChange }: NodeEditorProps<ConditionNode>) {
     });
   };
 
-  const remove = (ast:ConditionNode, onChange:OnChange)=>onChange(ast.else)
-  
-  const canDelete = flattened.pairs.length > 1
+  const remove = (ast: ConditionNode, onChange: OnChange) => onChange(ast.else);
+
+  const canDelete = flattened.pairs.length > 1;
   return (
     <>
       <Table striped bordered hover>
@@ -922,7 +939,7 @@ function ConditionEditor({ ast, onChange }: NodeEditorProps<ConditionNode>) {
           <tr>
             <th>Then</th>
             <th>Condition</th>
-            <th></th>
+            <th />
           </tr>
         </thead>
         <tbody>
@@ -936,7 +953,14 @@ function ConditionEditor({ ast, onChange }: NodeEditorProps<ConditionNode>) {
                   <NodeEditor {...pair.condition} />
                 </td>
                 <td>
-                  <Button onClick={()=>remove(pair.original.ast, pair.original.onChange)} disabled={!canDelete}>x</Button>
+                  <Button
+                    onClick={() =>
+                      remove(pair.original.ast, pair.original.onChange)
+                    }
+                    disabled={!canDelete}
+                  >
+                    x
+                  </Button>
                 </td>
               </tr>
             );
@@ -973,11 +997,12 @@ function ObjectUnaryEditor({
       lhs: [...ast.lhs, newPair]
     });
   };
-  const remove = (idx:number) => onChange({
+  const remove = (idx: number) =>
+    onChange({
       ...ast,
-      lhs: ast.lhs.filter(  (_,i) => i !== idx)
+      lhs: ast.lhs.filter((_, i) => i !== idx)
     });
-  
+
   return (
     <>
       <Table striped bordered hover>
@@ -985,7 +1010,7 @@ function ObjectUnaryEditor({
           <tr>
             <th>Key</th>
             <th>Value</th>
-            <th></th>
+            <th />
           </tr>
         </thead>
         <tbody>
@@ -1017,7 +1042,7 @@ function ObjectUnaryEditor({
                   />
                 </td>
                 <td>
-                  <Button onClick={()=>remove(idx)}>X</Button>
+                  <Button onClick={() => remove(idx)}>X</Button>
                 </td>
               </tr>
             );
