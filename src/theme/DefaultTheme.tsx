@@ -44,7 +44,8 @@ import {
   baseOperators,
   numberOperators,
   arrayOperators,
-  NodeEditorProps
+  NodeEditorProps,
+  SchemaProvider
 } from "../Types";
 
 // import { Theme, Icons } from "./Theme";
@@ -397,16 +398,22 @@ function LeafValueEditor({
 function PathEditor({
   ast,
   onChange,
-  validator,
   changeType,
-  cols = "5"
+  cols = "5",
+  schemaProvider
 }: NodeEditorProps<PathNode> & {
   changeType: Callback;
+  schemaProvider: SchemaProvider;
 }) {
+  const paths = schemaProvider.getPaths;
   return (
     <InputGroup as={Col} sm={cols}>
       <GrowDiv>
-        <PathPicker value={ast} onChange={option => onChange(option.value)} />
+        <PathPicker
+          value={ast}
+          onChange={option => onChange(option.value)}
+          paths={paths}
+        />
       </GrowDiv>
       <TypeSwitch ast={ast} onChange={onChange} changeType={changeType} />
       <Form.Control.Feedback type="invalid">

@@ -8,8 +8,7 @@ import jsonata from "jsonata";
 
 import { JsonataASTNode } from "./jsonata";
 import { serializer } from "../core/serializer";
-import getPaths, { Path as PathSuggestion } from "../schema/PathSuggester";
-import PurchaseEvent from "../schema/PurchaseEvent.schema";
+import { Path as PathSuggestion } from "../schema/PathSuggester";
 
 type AST = JsonataASTNode;
 type Option =
@@ -67,8 +66,6 @@ const CustomOption = (props: CustomOptionProps) => {
   }
 };
 
-const PurchasePaths = getPaths(PurchaseEvent as any);
-
 function Reducer(acc: Option[], p: PathSuggestion): Option[] {
   const subOptions: Option[] = p.subPaths ? p.subPaths.reduce(Reducer, []) : [];
   return [
@@ -83,25 +80,10 @@ function Reducer(acc: Option[], p: PathSuggestion): Option[] {
   ];
 }
 
-const colourOptions: Option[] = PurchasePaths.reduce(Reducer, []);
-
-const exactMatch = (inputValue: string) => {
-  return colourOptions.find((i: Option) => i.label === inputValue);
-};
-
-const filterOptions = (inputValue: string) => {
-  return colourOptions.filter((i: Option) =>
-    i.label.toLowerCase().includes(inputValue.toLowerCase())
-  );
-};
-
-const promiseOptions = async (inputValue: string) => {
-  return filterOptions(inputValue);
-};
-
 type PathEditorProps = {
   onChange: (ast: Option) => void;
   value: AST;
+  paths: (ast: AST) => PathSuggestion[];
 };
 
 const components = {
@@ -121,6 +103,22 @@ function isValidNewOption(inputValue: string): boolean {
 }
 
 export default function PathEditor(props: PathEditorProps) {
+  const colourOptions: Option[] = props.paths(props.value).reduce(Reducer, []);
+
+  const exactMatch = (inputValue: string) => {
+    return colourOptions.find((i: Option) => i.label === inputValue);
+  };
+
+  const filterOptions = (inputValue: string) => {
+    return colourOptions.filter((i: Option) =>
+      i.label.toLowerCase().includes(inputValue.toLowerCase())
+    );
+  };
+
+  const promiseOptions = async (inputValue: string) => {
+    return filterOptions(inputValue);
+  };
+
   const handleCreate = (inputValue: string) => {
     console.group("Option created");
     console.log("Wait a moment...");

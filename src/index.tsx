@@ -5,7 +5,12 @@ import jsonata from "jsonata";
 import { Editor } from "./AstEditor";
 import { DefaultTheme } from "./theme/DefaultTheme";
 import { serializer } from "./core/serializer.ts";
-import { AST } from "./Types";
+import { AST, combinerOperators } from "./Types";
+import PurchaseEvent from "./example/PurchaseEvent.schema";
+import { makeSchemaProvider } from "./schema/SchemaProvider";
+import { ButtonGroup, Button } from "react-bootstrap";
+
+const schemaProvider = makeSchemaProvider(PurchaseEvent);
 
 const set = jsonata(`[Q = 0, Q = 1, Q = 3]`).ast();
 const obj = jsonata(`{"one":Q = 0, "two": Q = 1,  "three": Q = 3}`).ast();
@@ -13,6 +18,22 @@ const cond = jsonata(`Q = 0 ? "Tier 1" : Q =1 ? "Tier 2" : "Tier 3"`).ast();
 
 const defaultAst = cond;
 const introspection = jsonata(`**[type="name"].value`);
+
+// TODO : Make this recursive, smarter
+const NodeWhitelist = jsonata(`
+  true or 
+  type = "binary"
+  or (type ="block" and type.expressions[type!="binary"].$length = 0)
+`);
+
+function isValidBasicExpression(newValue: AST): string | null {
+  try {
+    if (NodeWhitelist.evaluate(newValue)) {
+      return null;
+    }
+  } catch (e) {}
+  return "Can't use basic editor for advanced expressions. Try a simpler expression.";
+}
 
 function App() {
   const [ast, setAst] = useState(defaultAst);
@@ -45,7 +66,13 @@ function App() {
         />
         <button onClick={toAst}>-></button>
       </div> */}
-      <Editor ast={ast} onChange={setAst} theme={DefaultTheme} />
+      <Editor
+        ast={ast}
+        onChange={setAst}
+        theme={DefaultTheme}
+        isValidBasicExpression={isValidBasicExpression}
+        schemaProvider={schemaProvider}
+      />
       {serializedVersions.map((s, idx) => (
         <pre key={idx} style={{ marginTop: "20px" }}>
           {s}

@@ -1,5 +1,6 @@
 import { JsonataASTNode } from "./jsonata";
 import { Theme } from "./Theme";
+import { Path } from "./schema/PathSuggester";
 
 /**
  * Tracks parsing state for IDE edtiors. Allows for asynchronous parsing.
@@ -59,9 +60,25 @@ export interface NodeEditorProps<NodeType extends AST> {
  * Props for the base editor.
  */
 export interface RootNodeEditorProps extends NodeEditorProps<AST> {
-  schemaProvider?: SchemaProvider;
+  /**
+   * A theme to use for styling the editor. See the default theme, based on Bootstrap4.
+   */
   theme: Theme;
+  /**
+   * An optional shema provider. Used for path completion
+   */
+  schemaProvider?: SchemaProvider;
+  /**
+   * The set of valid variables used in a Variable Editor.
+   */
   boundVariables?: string[];
+  /**
+   * Controls when a String can be swapped to a visual editor.
+   *
+   * On null can be switched.
+   * On error, shows that error.
+   */
+  isValidBasicExpression?: (ast: AST) => string | null;
 }
 
 /**
@@ -73,7 +90,14 @@ export interface RootNodeEditorProps extends NodeEditorProps<AST> {
  * e.g. id it's not a string, don't allow `string` operators (`&`, etc.)
  */
 export interface SchemaProvider {
-  getTypeAtPath(ast: AST): string;
+  /**
+   * Best effort look up the type at a path. If the type can't be inferred, returns null
+   */
+  getTypeAtPath(ast: AST): string | null;
+  /**
+   * Best effor to look up valid paths
+   */
+  getPaths(ast: AST): Path[];
 }
 
 /**

@@ -3,7 +3,7 @@ import jsonata from "jsonata";
 
 import { createContainer } from "unstated-next";
 
-import { serializer } from "./serializer";
+import { serializer } from "./core/serializer";
 import {
   JsonataASTNode,
   BinaryNode,
@@ -23,16 +23,16 @@ import {
   SchemaProvider,
   NodeEditorProps,
   RootNodeEditorProps,
-  ValidatorError,
   Mode,
   Modes,
+  OnChange,
   combinerOperators,
   comparionsOperators,
   numberOperators
 } from "./Types";
+import { Validators } from "./util/Validators";
 
-type AST = JsonataASTNode;
-type OnChange<T extends AST = AST> = (ast: T) => void;
+export type AST = JsonataASTNode;
 
 type Container = {
   schemaProvider?: SchemaProvider;
@@ -47,42 +47,54 @@ function useEditorContext({
   return { schemaProvider, theme, boundVariables };
 }
 
-export const Context = createContainer(useEditorContext);
+const Context = createContainer(useEditorContext);
 
 // See all the AST types: https://github.com/mtiller/jsonata/blob/ts-2.0/src/parser/ast.ts
 // const NestedPathValue = jsonata(`$join(steps.value,".")`);
 
-const isNumberNode = (n: AST) => n.type === "number";
-const isPathNode = (n: AST) => n.type === "path";
+export const isNumberNode = (n: AST) => n.type === "number";
+export const isPathNode = (n: AST) => n.type === "path";
 
-function Validators(schemaProvider: SchemaProvider) {
-  return {
-    onlyNumberValidator(ast: AST) {
-      let error: ValidatorError;
-      if (isPathNode(ast)) {
-        const pathType =
-          schemaProvider && schemaProvider.getTypeAtPath(serializer(ast));
-        if (!pathType) {
-          error = null;
-        } else if (["integer", "number", "float"].includes(pathType)) {
-          error = null;
-        } else {
-          error = {
-            error: "non-number-schema",
-            message: "Use a variable that is a number"
-          };
-        }
-      } else if (!isNumberNode(ast)) {
-        error = {
-          error: "non-number",
-          message: "Use a number"
-        };
-      }
-      return error;
+
+export function Editor(props: RootNodeEditorProps) {
+  const [mode, setMode] = useState<Mode>(
+    // props.ast.type === "binary" ? NodeMode : IDEMode
+    Modes.IDEMode as Mode
+  );
+  const [toggleBlock, setToggleBlock] = useState(null);
+  
+  const {isValidBasicExpression=DefaultValidBasicExpression, ...rest} = props;
+  let editor =
+    mode === Modes.NodeMode ? (
+      <RootNodeEditor {...props} />
+    ) : (
+      <IDEEditor setToggleBlock={setToggleBlock} isValidBasicExpression={isValidBasicExpression}  {...rest}/>
+    );
+  function toggleMode() {
+    if (mode === Modes.NodeMode) {
+      setMode(Modes.IDEMode as Mode);
+    } else {
+      setMode(Modes.NodeMode as Mode);
     }
-  };
+  }
+
+  const { schemaProvider, theme } = props;
+  return (
+    <Context.Provider initialState={{ schemaProvider, theme }}>
+      <theme.Base
+        editor={editor}
+        toggleMode={toggleMode}
+        toggleBlock={toggleBlock}
+        mode={mode}
+      />
+    </Context.Provider>
+  );
 }
 
+function DefaultValidBasicExpression(ast:AST){
+  // 
+  return null;
+}
 function NodeEditor(props: NodeEditorProps<AST>) {
   const { ast, ...rest } = props;
   if (ast.type === "binary") {
@@ -110,45 +122,11 @@ function NodeEditor(props: NodeEditorProps<AST>) {
   }
 }
 
-export function Editor(props: RootNodeEditorProps) {
-  const [mode, setMode] = useState<Mode>(
-    // props.ast.type === "binary" ? NodeMode : IDEMode
-    Modes.IDEMode as Mode
-  );
-  const [toggleBlock, setToggleBlock] = useState(null);
-
-  let editor =
-    mode === Modes.NodeMode ? (
-      <RootNodeEditor {...props} />
-    ) : (
-      <IDEEditor setToggleBlock={setToggleBlock} {...props} />
-    );
-  function toggleMode() {
-    if (mode === Modes.NodeMode) {
-      setMode(Modes.IDEMode as Mode);
-    } else {
-      setMode(Modes.NodeMode as Mode);
-    }
-  }
-
-  const { schemaProvider, theme } = props;
-  return (
-    <Context.Provider initialState={{ schemaProvider, theme }}>
-      <theme.Base
-        editor={editor}
-        toggleMode={toggleMode}
-        toggleBlock={toggleBlock}
-        mode={mode}
-      />
-    </Context.Provider>
-  );
-}
-
 type IDEHookProps = {
   ast: AST;
   onChange: OnChange;
   validator?: (ast: AST) => Promise<boolean>;
-  setError: (error: any) => void;
+  setError: (error?: string) => void;
 };
 function useIDEHook({
   ast,
@@ -167,7 +145,7 @@ function useIDEHook({
     setText(newText);
     setParsing({
       inProgress: true,
-      error: ""
+      error: undefined
     });
     setImmediate(async () => {
       let newAst: AST;
@@ -190,7 +168,7 @@ function useIDEHook({
         inProgress: false,
         error: error
       });
-      setError && setError(null);
+      setError && setError(undefined);
       onChange(newAst);
     });
   }
@@ -199,8 +177,9 @@ function useIDEHook({
 
 type IDEEditorProps = NodeEditorProps<AST> & {
   setToggleBlock: (text: string | null) => void;
+  isValidBasicExpression(ast:AST): string | null
 };
-export function IDEEditor({ ast, onChange, setToggleBlock }: IDEEditorProps) {
+export function IDEEditor({ ast, onChange, setToggleBlock, isValidBasicExpression }: IDEEditorProps) {
   const { theme } = Context.useContainer();
   const [text, textChange, parsing] = useIDEHook({
     ast,
@@ -217,6 +196,7 @@ export function IDEEditor({ ast, onChange, setToggleBlock }: IDEEditorProps) {
     <theme.IDETextarea text={text} textChange={textChange} parsing={parsing} />
   );
 }
+
 function defaultPath(): PathNode {
   return {
     type: "path",
@@ -239,6 +219,7 @@ function defaultString(): StringNode {
     position: undefined
   };
 }
+
 function defaultNumber(): NumberNode {
   return {
     value: 0,
@@ -246,6 +227,7 @@ function defaultNumber(): NumberNode {
     position: undefined
   };
 }
+
 function defaultComparison(): BinaryNode {
   return {
     type: "binary",
@@ -255,6 +237,7 @@ function defaultComparison(): BinaryNode {
     position: undefined
   };
 }
+
 function defaultCondition(): ConditionNode {
   return {
     type: "condition",
@@ -265,7 +248,7 @@ function defaultCondition(): ConditionNode {
     value: undefined
   };
 }
-const DefaultNewCondition = defaultComparison();
+
 
 // TODO : Make this recursive, smarter
 const NodeWhitelist = jsonata(`
@@ -294,7 +277,7 @@ function newBinaryAdder(
       type: "binary",
       value: type,
       lhs: ast,
-      rhs: DefaultNewCondition
+      rhs: defaultComparison()
     });
 }
 
@@ -458,7 +441,7 @@ function PathEditor({
   validator,
   cols = "5"
 }: NodeEditorProps<PathNode>) {
-  const { theme } = Context.useContainer();
+  const { theme, schemaProvider } = Context.useContainer();
   const changeType = () => onChange(nextAst(ast));
 
   return (
@@ -467,6 +450,7 @@ function PathEditor({
       changeType={changeType}
       cols={cols}
       onChange={onChange}
+      schemaProvider={schemaProvider}
     />
   );
 }
