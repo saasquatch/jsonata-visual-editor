@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import jsonata from "jsonata";
 
-import { InputGroup, Form, Col, Button, ButtonGroup } from "react-bootstrap";
-
 import { createContainer } from "unstated-next";
 
 import { serializer } from "./serializer";
@@ -30,9 +28,7 @@ import {
   Modes,
   combinerOperators,
   comparionsOperators,
-  numberOperators,
-  baseOperators,
-  arrayOperators
+  numberOperators
 } from "./Types";
 
 type AST = JsonataASTNode;
@@ -319,7 +315,7 @@ function BinaryEditor(props: NodeEditorProps<BinaryNode>) {
 }
 
 function ComparisonEditor(props: NodeEditorProps<BinaryNode>) {
-  const { schemaProvider } = Context.useContainer();
+  const { schemaProvider, theme } = Context.useContainer();
 
   const shouldSwap = ({ ast }) => ast.value === "in";
   const swap = shouldSwap(props);
@@ -331,7 +327,7 @@ function ComparisonEditor(props: NodeEditorProps<BinaryNode>) {
 
   const changeOperator = (value: string) => {
     const newValue = { ...props.ast, value: value };
-    const swap = ast => {
+    const swap = (ast: AST) => {
       return { ...ast, lhs: ast.rhs, rhs: ast.lhs };
     };
     if (props.ast.value === "in" && newValue.value !== "in") {
@@ -347,53 +343,29 @@ function ComparisonEditor(props: NodeEditorProps<BinaryNode>) {
   const lhs = (
     <NodeEditor
       ast={props.ast[leftKey]}
-      onChange={newAst => props.onChange({ ...props.ast, [leftKey]: newAst })}
+      onChange={(newAst: AST) =>
+        props.onChange({ ...props.ast, [leftKey]: newAst })
+      }
       validator={validator}
     />
   );
   const rhs = (
     <NodeEditor
       ast={props.ast[rightKey]}
-      onChange={newAst => props.onChange({ ...props.ast, [rightKey]: newAst })}
+      onChange={(newAst: AST) =>
+        props.onChange({ ...props.ast, [rightKey]: newAst })
+      }
       validator={validator}
     />
   );
   return (
-    <>
-      <Form.Row>
-        {lhs}
-        <InputGroup as={Col} sm="2">
-          <Form.Control
-            as="select"
-            value={props.ast.value}
-            onChange={e => changeOperator(e.target.value)}
-          >
-            <optgroup label="Common Operators">
-              {Object.keys(baseOperators).map(k => (
-                <option key={k} value={k}>
-                  {baseOperators[k]}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Number Operators">
-              {Object.keys(numberOperators).map(k => (
-                <option key={k} value={k}>
-                  {numberOperators[k]}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Array Operators">
-              {Object.keys(arrayOperators).map(k => (
-                <option key={k} value={k}>
-                  {arrayOperators[k]}
-                </option>
-              ))}
-            </optgroup>
-          </Form.Control>
-        </InputGroup>
-        {rhs}
-      </Form.Row>
-    </>
+    <theme.ComparisonEditor
+      ast={props.ast}
+      onChange={props.onChange}
+      lhs={lhs}
+      rhs={rhs}
+      changeOperator={changeOperator}
+    />
   );
 }
 
