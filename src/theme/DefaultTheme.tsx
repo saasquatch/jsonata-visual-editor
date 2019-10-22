@@ -35,8 +35,7 @@ import {
   VariableNode,
   ObjectUnaryNode,
   ArrayUnaryNode
-} from "./jsonata";
-import { NodeEditorProps, Context } from "./AstEditor";
+} from "../core/jsonata";
 import {
   ParsingState,
   Modes,
@@ -44,8 +43,9 @@ import {
   AST,
   baseOperators,
   numberOperators,
-  arrayOperators
-} from "./Types";
+  arrayOperators,
+  NodeEditorProps
+} from "../Types";
 
 // import { Theme, Icons } from "./Theme";
 type Callback = () => void;

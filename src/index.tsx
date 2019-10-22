@@ -3,9 +3,8 @@ import ReactDOM from "react-dom";
 import jsonata from "jsonata";
 
 import { Editor } from "./AstEditor";
-import { ErrorBoundary } from "./ErrorBoundary";
-import { DefaultTheme } from "./DefaultTheme";
-import { serializer } from "./serializer";
+import { DefaultTheme } from "./theme/DefaultTheme";
+import { serializer } from "./core/serializer.ts";
 import { AST } from "./Types";
 
 const set = jsonata(`[Q = 0, Q = 1, Q = 3]`).ast();
@@ -34,7 +33,7 @@ function App() {
   }
 
   return (
-    <ErrorBoundary>
+    <div>
       <h1>Query Builder</h1>
       <p>Filter for which Purchase events will trigger this program</p>
       {/* <div>
@@ -58,7 +57,7 @@ function App() {
           {JSON.stringify(ast, null, 2)}
         </pre>
       </div>
-    </ErrorBoundary>
+    </div>
   );
 }
 

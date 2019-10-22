@@ -7,9 +7,9 @@ import { Badge } from "react-bootstrap";
 import jsonata from "jsonata";
 
 import { JsonataASTNode } from "./jsonata";
-import { serializer } from "./serializer";
-import getPaths, { Path as PathSuggestion } from "./PathSuggester";
-import PurchaseEvent from "./PurchaseEvent.schema";
+import { serializer } from "../core/serializer";
+import getPaths, { Path as PathSuggestion } from "../schema/PathSuggester";
+import PurchaseEvent from "../schema/PurchaseEvent.schema";
 
 type AST = JsonataASTNode;
 type Option =
