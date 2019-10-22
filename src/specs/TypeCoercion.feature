@@ -25,5 +25,5 @@ Feature: Type Coercion
     | false | false |
     | tru | "tru" | 
     | null | null |
-    | has"quotes |  
+    | has"quotes |  "has\"quotes" |
 

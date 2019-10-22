@@ -5,7 +5,11 @@ import jsonata from "jsonata";
 import { Editor } from "./AstEditor";
 import { ErrorBoundary } from "./ErrorBoundary";
 
-const simpleCondition = `{ "one": Q = 0, "two": Q = 1, "three": Q = 3}`;
+const set = `[Q = 0, Q = 1, Q = 3]`;
+const obj = `{"one":Q = 0, "two": Q = 1,  "three": Q = 3}`;
+const cond = `Q = 0 ? "one" : Q =1 ? "two" : "three"`;
+
+const simpleCondition = cond;
 const expr = jsonata(simpleCondition);
 const defaultAst = expr.ast();
 const introspection = jsonata(`**[type="name"].value`);

@@ -20,6 +20,13 @@ export interface BinaryNode extends Node {
   value: BinaryValue;
 }
 
+export interface BindNode extends Node {
+  type: "bind";
+  value: ":=";
+  lhs: VariableNode;
+  rhs: JsonataASTNode;
+}
+
 type BinaryValue =
   | "="
   | "!="
@@ -112,11 +119,18 @@ export interface ConditionNode extends Node {
   else: JsonataASTNode;
 }
 
+export interface LambdaNode extends Node {
+  type: "lambda";
+  arguments: JsonataASTNode[];
+  body: JsonataASTNode;
+}
+
 export type LiteralNode = NumberNode | StringNode | ValueNode;
 
 export type JsonataASTNode =
   | NumberNode
   | StringNode
+  | ValueNode
   | BinaryNode
   | FunctionNode
   | VariableNode
@@ -125,8 +139,9 @@ export type JsonataASTNode =
   | ApplyNode
   | UnaryNode
   | FilterNode
-  | ValueNode
   | NameNode
   | WildcardNode
   | DescendantNode
-  | ConditionNode;
+  | ConditionNode
+  | BindNode
+  | LambdaNode;

@@ -60,6 +60,16 @@ export function serializer(node: AST): string {
     return name + stages;
   } else if (node.type === "filter") {
     return "[" + serializer(node.expr) + "]";
+  } else if (node.type === "bind") {
+    return serializer(node.lhs) + " " + node.value + " " + serializer(node.rhs);
+  } else if (node.type === "lambda") {
+    return (
+      "function (" +
+      node.arguments.map(arg => serializer(arg)).join(", ") +
+      ") {" +
+      serializer(node.body) +
+      "}"
+    );
   } else if (node.type === "condition") {
     return (
       serializer(node.condition) +

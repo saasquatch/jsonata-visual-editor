@@ -33,11 +33,15 @@ import {
   LiteralNode,
   BlockNode,
   ConditionNode,
-  UnaryNode
+  StringNode,
+  UnaryNode,
+  VariableNode,
+  ObjectUnaryNode,
+  ArrayUnaryNode
 } from "./jsonata";
 
 type AST = JsonataASTNode;
-type OnChange = (ast: AST) => void;
+type OnChange<T extends AST = AST> = (ast: T) => void;
 
 AntdIcon.add(
   AntDesignOutline,
@@ -129,6 +133,7 @@ const combinerOperators = {
   and: "and",
   or: "or"
 };
+
 const mathOperators = {
   "-": "minus",
   "+": "plus",
@@ -136,6 +141,7 @@ const mathOperators = {
   "/": "divided by",
   "%": "modulo"
 };
+
 const operators = {
   ...comparionsOperators,
   ...mathOperators,
@@ -160,8 +166,10 @@ function NodeEditor(props: NodeEditorProps<AST>) {
     return <ConditionEditor {...rest} ast={ast} />;
   } else if (ast.type === "variable") {
     return <VariableEditor {...rest} ast={ast} />;
-  } else if (ast.type === "unary"){
-    return <UnaryEditor {...rest} ast={ast} />;
+  } else if (ast.type === "unary" && ast.value === "{") {
+    return <ObjectUnaryEditor {...rest} ast={ast} />;
+  } else if (ast.type === "unary" && ast.value === "[") {
+    return <ArrayUnaryEditor {...rest} ast={ast} />;
   } else {
     throw new Error("Unsupported node type: " + props.ast.type);
   }
@@ -329,16 +337,18 @@ function defaultPath() {
   };
 }
 
-function defaultString() {
+function defaultString(): StringNode {
   return {
     value: "text",
-    type: "string"
+    type: "string",
+    position: 0
   };
 }
-function defaultNumber() {
+function defaultNumber(): NumberNode {
   return {
     value: 0,
-    type: "number"
+    type: "number",
+    position: 0
   };
 }
 function defaultComparison(): BinaryNode {
@@ -353,8 +363,8 @@ function defaultCondition(): ConditionNode {
   return {
     type: "condition",
     condition: defaultComparison(),
-    then: defaultNumber(),
-    else: defaultNumber()
+    then: defaultString(),
+    else: defaultString()
   };
 }
 const DefaultNewCondition = defaultComparison();
@@ -420,12 +430,12 @@ function BinaryEditor(props: NodeEditorProps<BinaryNode>) {
     return <CombinerEditor {...props} />;
   }
   if (Object.keys(comparionsOperators).includes(props.ast.value)) {
-    return <BinaryBaseEditor {...props} />;
+    return <ComparisonEditor {...props} />;
   }
   // TODO: Implement MathNode
 }
 
-function BinaryBaseEditor(props: NodeEditorProps<BinaryNode>) {
+function ComparisonEditor(props: NodeEditorProps<BinaryNode>) {
   const shouldSwap = ({ ast }) => ast.value === "in";
   const swap = shouldSwap(props);
   const leftKey = !swap ? "lhs" : "rhs";
@@ -549,6 +559,9 @@ function CombinerEditor(props: CombinerProps) {
     onChange: props.onChange,
     parentType: props.ast.value
   });
+  const removeLast = () => props.onChange(props.ast.lhs);
+  const addNew = newBinaryAdder(props.ast.value, props.ast, props.onChange);
+
   return (
     <Inset>
       <Form.Row>
@@ -581,24 +594,7 @@ function CombinerEditor(props: CombinerProps) {
             </Form.Row>
           ))}
 
-          <ButtonGroup aria-label="Basic example">
-            <Button
-              variant="secondary"
-              onClick={newBinaryAdder(
-                props.ast.value,
-                props.ast,
-                props.onChange
-              )}
-            >
-              Add
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => props.onChange(props.ast.lhs)}
-            >
-              x Remove Last
-            </Button>
-          </ButtonGroup>
+          <AddRemoveGroup addNew={addNew} removeLast={removeLast} />
         </Col>
       </Form.Row>
     </Inset>
@@ -851,30 +847,34 @@ function flattenConditions({ ast, onChange }: FlattenerProps): Flattened {
   };
 }
 
-
-
-function VariableEditor({ast, onChange, cols="5"}: NodeEditorProps<ConditionNode>) {
+function VariableEditor({
+  ast,
+  onChange,
+  cols = "5"
+}: NodeEditorProps<VariableNode>) {
   // TODO: Should provide this, maybe via Context? unstated-next?
   const tiers = ["tier1", "tier2", "tier3"];
-  return <InputGroup as={Col} sm={cols}>
-  <Form.Control
-    as="select"
-    value={ast.value}
-    onChange={e => {
-      // @ts-ignore
-      const newValue = { ...ast, value: e.target.value };
-      onChange(newValue);
-    }}
-  >
-    <optgroup label="Tiers">
-      {tiers.map(k => (
-        <option key={k} value={k}>
-          {k}
-        </option>
-      ))}
-    </optgroup>
-  </Form.Control>
-</InputGroup>
+  return (
+    <InputGroup as={Col} sm={cols}>
+      <Form.Control
+        as="select"
+        value={ast.value}
+        onChange={e => {
+          // @ts-ignore
+          const newValue = { ...ast, value: e.target.value };
+          onChange(newValue);
+        }}
+      >
+        <optgroup label="Tiers">
+          {tiers.map(k => (
+            <option key={k} value={k}>
+              {k}
+            </option>
+          ))}
+        </optgroup>
+      </Form.Control>
+    </InputGroup>
+  );
 }
 
 function ConditionEditor({ ast, onChange }: NodeEditorProps<ConditionNode>) {
@@ -899,100 +899,194 @@ function ConditionEditor({ ast, onChange }: NodeEditorProps<ConditionNode>) {
       }
     });
   };
+
+  const remove = (ast:ConditionNode, onChange:OnChange)=>{
+    onChange(
+      ast.else
+    )
+  }
+  const canDelete = flattened.pairs.length > 1
   return (
     <>
-      <Row>
-        <Col sm="9">
-          <h2>Condition</h2>
-        </Col>
-        <Col sm="3">
-          <h2>Then</h2>
-        </Col>
-      </Row>
-      {flattened.pairs.map(pair => {
-        return (
-          <Row>
-            <Col sm="9">
-              <NodeEditor {...pair.condition} />
-            </Col>
-            <NodeEditor {...pair.then} cols="2" />
-          </Row>
-        );
-      })}
-      <Row>
-      <Col sm="4">
-          <ButtonGroup aria-label="Basic example">
-            <Button variant="secondary" onClick={addNew}>
-              Add
-            </Button>
-            <Button variant="secondary" onClick={removeLast}>
-              x Remove Last
-            </Button>
-          </ButtonGroup>
-        </Col>
-        <Col sm="2">
-          <h3>Default</h3>
-        </Col>
-          <NodeEditor {...flattened.finalElse} cols="6" />
-
-      </Row>
+      <Table striped bordered hover>
+        <thead>
+          <tr>
+            <th>Then</th>
+            <th>Condition</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {flattened.pairs.map(pair => {
+            return (
+              <tr>
+                <td>
+                  <NodeEditor {...pair.then} cols="12" />
+                </td>
+                <td>
+                  <NodeEditor {...pair.condition} />
+                </td>
+                <td>
+                  <Button onClick={()=>remove(pair.original.ast, pair.original.onChange)} disabled={!canDelete}>x</Button>
+                </td>
+              </tr>
+            );
+          })}
+          <tr>
+            <td>
+              <AddRemoveGroup addNew={addNew} removeLast={removeLast} />
+            </td>
+            <td>
+              Default:
+              <NodeEditor {...flattened.finalElse} cols="6" />
+            </td>
+          </tr>
+        </tbody>
+      </Table>
     </>
   );
 }
 
-function UnaryEditor({ast, onChange}: NodeEditorProps<UnaryNode>) {
+function ObjectUnaryEditor({
+  ast,
+  onChange
+}: NodeEditorProps<ObjectUnaryNode>) {
   const removeLast = () => {
     onChange({
       ...ast,
-      lhs: ast.lhs.slice(0,-1)
-    })
+      lhs: ast.lhs.slice(0, -1)
+    });
   };
   const addNew = () => {
-    const newPair = [
-      defaultString(),
-      defaultComparison()
-    ];
+    const newPair = [defaultString(), defaultComparison()];
     onChange({
       ...ast,
-      lhs:[...ast.lhs, newPair]
-    })
+      lhs: [...ast.lhs, newPair]
+    });
   };
-  return <>
-  <Table striped bordered hover>
-  <thead>
-    <tr>
-      <th>Key</th>
-      <th>Value</th>
-    </tr>
-  </thead>
-  <tbody>
-    {ast.lhs.map( (pair:[AST,AST], idx:number) =>{
+  const remove = (idx:number) => {
+    const newLhs = [...ast.lhs];
+    newLhs.splice(idx,1);
+    onChange({
+      ...ast,
+      lhs: newLhs
+    });
+  }
+  return (
+    <>
+      <Table striped bordered hover>
+        <thead>
+          <tr>
+            <th>Key</th>
+            <th>Value</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {ast.lhs.map((pair: [AST, AST], idx: number) => {
+            const changePair = (newAst: AST, side: 0 | 1) => {
+              const newLhs: AST[][] = [...ast.lhs];
+              const newPair = [...pair];
+              newPair[side] = newAst;
+              newLhs[idx] = newPair;
+              onChange({
+                ...ast,
+                lhs: newLhs
+              });
+            };
+            return (
+              <tr>
+                <td>
+                  <NodeEditor
+                    ast={pair[0]}
+                    onChange={newAst => changePair(newAst, 0)}
+                    cols="12"
+                  />
+                </td>
+                <td>
+                  <NodeEditor
+                    ast={pair[1]}
+                    onChange={newAst => changePair(newAst, 1)}
+                    cols="12"
+                  />
+                </td>
+                <td>
+                  <Button onClick={()=>remove(idx)}>X</Button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </Table>
+      <AddRemoveGroup addNew={addNew} removeLast={removeLast} />
+    </>
+  );
+}
 
-      const changePair = (newAst:AST, side:0|1) => {
-        const newLhs: AST[][] = [...ast.lhs];
-        const newPair = [...pair ];
-        newPair[side] = newAst;
-        newLhs[idx] = newPair;
-        onChange({
-          ...ast,
-          lhs: newLhs
-        });
-      }
-      return <tr>
-      <td><NodeEditor ast={pair[0]} onChange={(newAst) => changePair(newAst,0) } cols="12" /></td>
-      <td><NodeEditor ast={pair[1]} onChange={(newAst) => changePair(newAst,1) } cols="12" /></td>
-    </tr>
+function ArrayUnaryEditor({ ast, onChange }: NodeEditorProps<ArrayUnaryNode>) {
+  const removeLast = () => {
+    onChange({
+      ...ast,
+      expressions: ast.expressions.slice(0, -1)
+    });
+  };
+  const addNew = () => {
+    onChange({
+      ...ast,
+      expressions: [...ast.expressions, defaultComparison()]
+    });
+  };
+  return (
+    <>
+      <Table striped bordered hover>
+        <thead>
+          <tr>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ast.expressions.map((expr: AST, idx: number) => {
+            const changePair = (newAst: AST) => {
+              const newExpr: AST[] = [...ast.expressions];
+              newExpr[idx] = newAst;
+              onChange({
+                ...ast,
+                expressions: newExpr
+              });
+            };
+            return (
+              <tr>
+                <td>
+                  <NodeEditor
+                    ast={expr}
+                    onChange={newAst => changePair(newAst)}
+                    cols="12"
+                  />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </Table>
+      <AddRemoveGroup addNew={addNew} removeLast={removeLast} />
+    </>
+  );
+}
 
-    })}
-  </tbody>
-</Table>
-          <ButtonGroup aria-label="Basic example">
-          <Button variant="secondary" onClick={addNew}>
-            Add
-          </Button>
-          <Button variant="secondary" onClick={removeLast}>
-            x Remove Last
-          </Button>
-        </ButtonGroup>
-</>
+type Callback = () => void;
+type AddRemoveGroupProps = {
+  addNew: Callback;
+  removeLast: Callback;
+};
+function AddRemoveGroup({ addNew, removeLast }: AddRemoveGroupProps) {
+  return (
+    <ButtonGroup>
+      <Button variant="secondary" onClick={addNew}>
+        Add
+      </Button>
+      <Button variant="secondary" onClick={removeLast}>
+        x Remove Last
+      </Button>
+    </ButtonGroup>
+  );
 }
