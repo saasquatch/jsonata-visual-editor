@@ -34,7 +34,7 @@ import {
   BlockNode,
   ConditionNode,
   StringNode,
-  UnaryNode,
+  NumberNode,
   VariableNode,
   ObjectUnaryNode,
   ArrayUnaryNode
@@ -167,9 +167,9 @@ function NodeEditor(props: NodeEditorProps<AST>) {
   } else if (ast.type === "variable") {
     return <VariableEditor {...rest} ast={ast} />;
   } else if (ast.type === "unary" && ast.value === "{") {
-    return <ObjectUnaryEditor {...rest} ast={ast} />;
+    return <ObjectUnaryEditor {...rest} ast={ast as ObjectUnaryNode} />;
   } else if (ast.type === "unary" && ast.value === "[") {
-    return <ArrayUnaryEditor {...rest} ast={ast} />;
+    return <ArrayUnaryEditor {...rest} ast={ast as ArrayUnaryNode} />;
   } else {
     throw new Error("Unsupported node type: " + props.ast.type);
   }
@@ -314,7 +314,7 @@ export function IDEEditor({ ast, onChange, setToggleBlock }: IDEEditorProps) {
         as="textarea"
         rows="3"
         value={text}
-        onChange={e => /* @ts-ignore */ textChange(e.target.value)}
+        onChange={e => /** @ts-ignore */ textChange(e.target.value)}
       />
       <br />
       {parsing.inProgress ? (
@@ -325,15 +325,18 @@ export function IDEEditor({ ast, onChange, setToggleBlock }: IDEEditorProps) {
     </div>
   );
 }
-function defaultPath() {
+function defaultPath(): PathNode {
   return {
     type: "path",
     steps: [
       {
+        type: "name",
         value: "revenue",
-        type: "name"
+        position: 0
       }
-    ]
+    ],
+    position: undefined,
+    value: undefined
   };
 }
 
@@ -341,14 +344,14 @@ function defaultString(): StringNode {
   return {
     value: "text",
     type: "string",
-    position: 0
+    position: undefined
   };
 }
 function defaultNumber(): NumberNode {
   return {
     value: 0,
     type: "number",
-    position: 0
+    position: undefined
   };
 }
 function defaultComparison(): BinaryNode {
@@ -356,7 +359,8 @@ function defaultComparison(): BinaryNode {
     type: "binary",
     value: "=",
     lhs: defaultPath(),
-    rhs: defaultNumber()
+    rhs: defaultNumber(),
+    position: undefined
   };
 }
 function defaultCondition(): ConditionNode {
@@ -364,7 +368,9 @@ function defaultCondition(): ConditionNode {
     type: "condition",
     condition: defaultComparison(),
     then: defaultString(),
-    else: defaultString()
+    else: defaultString(),
+    position: undefined,
+    value: undefined
   };
 }
 const DefaultNewCondition = defaultComparison();
@@ -670,12 +676,13 @@ function isNumber(str: string) {
   return !isNaN(str) && !isNaN(parseFloat(str));
 }
 
-function autoCoerce(newValue: string) {
+function autoCoerce(newValue: string):AST {
   const cleanVal = newValue.trim().toLowerCase();
   if (isNumber(newValue)) {
     return {
       type: "number",
-      value: parseFloat(newValue)
+      value: parseFloat(newValue),
+      position: undefined
     };
   } else if (["true", "false", "null"].includes(cleanVal)) {
     let value: any;
@@ -691,12 +698,14 @@ function autoCoerce(newValue: string) {
     }
     return {
       type: "value",
-      value: value
+      value: value,
+      position: undefined
     };
   } else {
     return {
       type: "string",
-      value: newValue
+      value: newValue,
+      position: undefined
     };
   }
 }
@@ -786,7 +795,10 @@ type Flattened = {
   pairs: {
     condition: FlattenerProps;
     then: FlattenerProps;
-    original: FlattenerProps;
+    original: {
+      ast: ConditionNode;
+      onChange: OnChange;
+    };
   }[];
   finalElse: FlattenerProps;
 };
@@ -900,11 +912,8 @@ function ConditionEditor({ ast, onChange }: NodeEditorProps<ConditionNode>) {
     });
   };
 
-  const remove = (ast:ConditionNode, onChange:OnChange)=>{
-    onChange(
-      ast.else
-    )
-  }
+  const remove = (ast:ConditionNode, onChange:OnChange)=>onChange(ast.else)
+  
   const canDelete = flattened.pairs.length > 1
   return (
     <>
@@ -964,14 +973,11 @@ function ObjectUnaryEditor({
       lhs: [...ast.lhs, newPair]
     });
   };
-  const remove = (idx:number) => {
-    const newLhs = [...ast.lhs];
-    newLhs.splice(idx,1);
-    onChange({
+  const remove = (idx:number) => onChange({
       ...ast,
-      lhs: newLhs
+      lhs: ast.lhs.filter(  (_,i) => i !== idx)
     });
-  }
+  
   return (
     <>
       <Table striped bordered hover>

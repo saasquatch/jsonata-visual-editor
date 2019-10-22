@@ -5,13 +5,11 @@ import jsonata from "jsonata";
 import { Editor } from "./AstEditor";
 import { ErrorBoundary } from "./ErrorBoundary";
 
-const set = `[Q = 0, Q = 1, Q = 3]`;
-const obj = `{"one":Q = 0, "two": Q = 1,  "three": Q = 3}`;
-const cond = `Q = 0 ? "one" : Q =1 ? "two" : "three"`;
+const set = jsonata(`[Q = 0, Q = 1, Q = 3]`).ast();
+const obj = jsonata(`{"one":Q = 0, "two": Q = 1,  "three": Q = 3}`).ast();
+const cond = jsonata(`Q = 0 ? "one" : Q =1 ? "two" : "three"`).ast();
 
-const simpleCondition = cond;
-const expr = jsonata(simpleCondition);
-const defaultAst = expr.ast();
+const defaultAst = cond;
 const introspection = jsonata(`**[type="name"].value`);
 
 function App() {
@@ -32,7 +30,7 @@ function App() {
         />
         <button onClick={toAst}>-></button>
       </div> */}
-      <Editor ast={ast} text={simpleCondition} onChange={setAst} />
+      <Editor ast={ast} onChange={setAst} />
       <div style={{ marginTop: "500px" }}>
         <pre>
           Keys used: {JSON.stringify(keys, null, 2)} {typeof keys} <br />
