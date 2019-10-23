@@ -54,6 +54,7 @@ function App() {
   } catch (e) {
     serializedVersions.push(e.message);
   }
+  const boundVariables = ["var", "var1", "var2", "tenantSettings", "tier1Name"];
 
   return (
     <div>
@@ -73,6 +74,7 @@ function App() {
         onChange={setAst}
         theme={DefaultTheme}
         isValidBasicExpression={isValidBasicExpression}
+        boundVariables={boundVariables}
         schemaProvider={schemaProvider}
       />
       {serializedVersions.map((s, idx) => (

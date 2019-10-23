@@ -129,6 +129,8 @@ function NodeEditor(props: NodeEditorProps<AST>) {
     return <ConditionEditor {...rest} ast={ast} />;
   } else if (ast.type === "variable") {
     return <VariableEditor {...rest} ast={ast} />;
+  } else if (ast.type === "bind") {
+    return <BindEditor {...rest} ast={ast} />;
   } else if (ast.type === "unary" && ast.value === "{") {
     return <ObjectUnaryEditor {...rest} ast={ast as ObjectUnaryNode} />;
   } else if (ast.type === "unary" && ast.value === "[") {
@@ -217,7 +219,6 @@ export function IDEEditor({
     <theme.IDETextarea text={text} textChange={textChange} parsing={parsing} />
   );
 }
-
 
 function RootNodeEditor(props: NodeEditorProps<AST>) {
   const { theme } = Context.useContainer();
@@ -346,12 +347,13 @@ function CombinerEditor(props: CombinerProps) {
     parentType: props.ast.value
   });
   const removeLast = () => props.onChange(props.ast.lhs);
-  const addNew = () => onChange({
-    type: "binary",
-    value: props.ast.type,
-    lhs: props.ast,
-    rhs: defaultProvider.defaultComparison()
-  });
+  const addNew = () =>
+    onChange({
+      type: "binary",
+      value: props.ast.type,
+      lhs: props.ast,
+      rhs: defaultProvider.defaultComparison()
+    });
 
   const onChange = (val: AST) =>
     props.onChange(
@@ -651,6 +653,27 @@ function ConditionEditor({ ast, onChange }: NodeEditorProps<ConditionNode>) {
       removeLast={removeLast}
     />
   );
+}
+
+function BindEditor({ ast, onChange }: NodeEditorProps<BindNode>) {
+  const { theme } = Context.useContainer();
+
+  const lhs = (
+    <NodeEditor
+      ast={ast.lhs}
+      onChange={(newAst: AST) => onChange({ ...ast, lhs: newAst })}
+      // validator={validator}
+    />
+  );
+  const rhs = (
+    <NodeEditor
+      ast={ast.rhs}
+      onChange={(newAst: AST) => onChange({ ...ast, rhs: newAst })}
+      // validator={validator}
+    />
+  );
+
+  return <theme.BindEditor ast={ast} onChange={onChange} lhs={lhs} rhs={rhs} />;
 }
 
 function ObjectUnaryEditor({

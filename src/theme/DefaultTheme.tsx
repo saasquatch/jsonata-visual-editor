@@ -507,6 +507,24 @@ function ComparisonEditor({
   );
 }
 
+function BindEditor({
+  lhs,
+  rhs
+}: NodeEditorProps<BinaryNode> & {
+  lhs: JSX.Element;
+  rhs: JSX.Element;
+}) {
+  return (
+    <>
+      <Form.Row>
+        {lhs}
+        <Col sm="2">set value to:</Col>
+        {rhs}
+      </Form.Row>
+    </>
+  );
+}
+
 export const DefaultTheme = {
   /*
     Base editors
@@ -528,6 +546,7 @@ export const DefaultTheme = {
   /*
     Leaf editors
    */
+  BindEditor,
   VariableEditor,
   LeafValueEditor,
   PathEditor
