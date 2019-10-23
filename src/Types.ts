@@ -183,11 +183,16 @@ export const mathOperators = {
   "%": "modulo"
 };
 
+export const stringOperators = {
+  "&": "concatenate"
+};
+
 /**
  * Set of *all* binary operators
  */
 export const operators = {
   ...comparionsOperators,
   ...mathOperators,
-  ...combinerOperators
+  ...combinerOperators,
+  ...stringOperators
 };
