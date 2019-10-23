@@ -11,8 +11,6 @@ import {
   LiteralNode,
   BlockNode,
   ConditionNode,
-  StringNode,
-  NumberNode,
   VariableNode,
   ObjectUnaryNode,
   ArrayUnaryNode
@@ -23,28 +21,32 @@ import {
   SchemaProvider,
   NodeEditorProps,
   RootNodeEditorProps,
+  DefaultProvider,
   Mode,
   Modes,
   OnChange,
+  AST,
   combinerOperators,
   comparionsOperators,
   numberOperators
 } from "./Types";
 import { Validators } from "./util/Validators";
-
-export type AST = JsonataASTNode;
+import { StandardDefaultProvider } from "./util/DefaultProvider";
 
 type Container = {
   schemaProvider?: SchemaProvider;
   theme: Theme;
   boundVariables?: string[];
+  defaultProvider: DefaultProvider;
 };
+
 function useEditorContext({
   schemaProvider,
   theme,
-  boundVariables
+  boundVariables,
+  defaultProvider
 }: Container) {
-  return { schemaProvider, theme, boundVariables };
+  return { schemaProvider, theme, boundVariables, defaultProvider };
 }
 
 const Context = createContainer(useEditorContext);
@@ -55,21 +57,18 @@ const Context = createContainer(useEditorContext);
 export const isNumberNode = (n: AST) => n.type === "number";
 export const isPathNode = (n: AST) => n.type === "path";
 
-
 export function Editor(props: RootNodeEditorProps) {
   const [mode, setMode] = useState<Mode>(
     // props.ast.type === "binary" ? NodeMode : IDEMode
     Modes.IDEMode as Mode
   );
   const [toggleBlock, setToggleBlock] = useState(null);
-  
-  const {isValidBasicExpression=DefaultValidBasicExpression, ...rest} = props;
-  let editor =
-    mode === Modes.NodeMode ? (
-      <RootNodeEditor {...props} />
-    ) : (
-      <IDEEditor setToggleBlock={setToggleBlock} isValidBasicExpression={isValidBasicExpression}  {...rest}/>
-    );
+
+  const {
+    isValidBasicExpression = DefaultValidBasicExpression,
+    ...rest
+  } = props;
+
   function toggleMode() {
     if (mode === Modes.NodeMode) {
       setMode(Modes.IDEMode as Mode);
@@ -78,9 +77,27 @@ export function Editor(props: RootNodeEditorProps) {
     }
   }
 
-  const { schemaProvider, theme } = props;
+  const { schemaProvider, theme, defaultProvider = {} } = props;
+  const defaults: DefaultProvider = {
+    ...StandardDefaultProvider,
+    ...defaultProvider
+  };
+
+  let editor =
+    mode === Modes.NodeMode ? (
+      <RootNodeEditor {...props} />
+    ) : (
+      <IDEEditor
+        setToggleBlock={setToggleBlock}
+        isValidBasicExpression={isValidBasicExpression}
+        {...rest}
+      />
+    );
+
   return (
-    <Context.Provider initialState={{ schemaProvider, theme }}>
+    <Context.Provider
+      initialState={{ schemaProvider, theme, defaultProvider: defaults }}
+    >
       <theme.Base
         editor={editor}
         toggleMode={toggleMode}
@@ -91,8 +108,8 @@ export function Editor(props: RootNodeEditorProps) {
   );
 }
 
-function DefaultValidBasicExpression(ast:AST){
-  // 
+function DefaultValidBasicExpression(ast: AST) {
+  //
   return null;
 }
 function NodeEditor(props: NodeEditorProps<AST>) {
@@ -177,9 +194,14 @@ function useIDEHook({
 
 type IDEEditorProps = NodeEditorProps<AST> & {
   setToggleBlock: (text: string | null) => void;
-  isValidBasicExpression(ast:AST): string | null
+  isValidBasicExpression(ast: AST): string | null;
 };
-export function IDEEditor({ ast, onChange, setToggleBlock, isValidBasicExpression }: IDEEditorProps) {
+export function IDEEditor({
+  ast,
+  onChange,
+  setToggleBlock,
+  isValidBasicExpression
+}: IDEEditorProps) {
   const { theme } = Context.useContainer();
   const [text, textChange, parsing] = useIDEHook({
     ast,
@@ -197,89 +219,6 @@ export function IDEEditor({ ast, onChange, setToggleBlock, isValidBasicExpressio
   );
 }
 
-function defaultPath(): PathNode {
-  return {
-    type: "path",
-    steps: [
-      {
-        type: "name",
-        value: "revenue",
-        position: 0
-      }
-    ],
-    position: undefined,
-    value: undefined
-  };
-}
-
-function defaultString(): StringNode {
-  return {
-    value: "text",
-    type: "string",
-    position: undefined
-  };
-}
-
-function defaultNumber(): NumberNode {
-  return {
-    value: 0,
-    type: "number",
-    position: undefined
-  };
-}
-
-function defaultComparison(): BinaryNode {
-  return {
-    type: "binary",
-    value: "=",
-    lhs: defaultPath(),
-    rhs: defaultNumber(),
-    position: undefined
-  };
-}
-
-function defaultCondition(): ConditionNode {
-  return {
-    type: "condition",
-    condition: defaultComparison(),
-    then: defaultString(),
-    else: defaultString(),
-    position: undefined,
-    value: undefined
-  };
-}
-
-
-// TODO : Make this recursive, smarter
-const NodeWhitelist = jsonata(`
-  true or 
-  type = "binary"
-  or (type ="block" and type.expressions[type!="binary"].$length = 0)
-`);
-
-function isValidBasicExpression(newValue: AST) {
-  try {
-    if (NodeWhitelist.evaluate(newValue)) {
-      return null;
-    }
-  } catch (e) {}
-  return "Can't use basic editor for advanced expressions. Try a simpler expression.";
-}
-
-function newBinaryAdder(
-  type: string,
-  ast: AST,
-  onChange: (ast: AST) => void,
-  nested = false
-) {
-  return () =>
-    onChange({
-      type: "binary",
-      value: type,
-      lhs: ast,
-      rhs: defaultComparison()
-    });
-}
 
 function RootNodeEditor(props: NodeEditorProps<AST>) {
   const { theme } = Context.useContainer();
@@ -401,14 +340,19 @@ function buildFlattenedBinaryValueSwap({ ast, parentType, newValue }) {
 type CombinerProps = NodeEditorProps<BinaryNode>;
 
 function CombinerEditor(props: CombinerProps) {
-  const { theme } = Context.useContainer();
+  const { theme, defaultProvider } = Context.useContainer();
   const flattenedBinaryNodes = flattenBinaryNodesThatMatch({
     ast: props.ast,
     onChange: props.onChange,
     parentType: props.ast.value
   });
   const removeLast = () => props.onChange(props.ast.lhs);
-  const addNew = newBinaryAdder(props.ast.value, props.ast, props.onChange);
+  const addNew = () => onChange({
+    type: "binary",
+    value: props.ast.type,
+    lhs: props.ast,
+    rhs: defaultProvider.defaultComparison()
+  });
 
   const onChange = (val: AST) =>
     props.onChange(
@@ -441,8 +385,8 @@ function PathEditor({
   validator,
   cols = "5"
 }: NodeEditorProps<PathNode>) {
-  const { theme, schemaProvider } = Context.useContainer();
-  const changeType = () => onChange(nextAst(ast));
+  const { theme, schemaProvider, defaultProvider } = Context.useContainer();
+  const changeType = () => onChange(nextAst(ast, defaultProvider));
 
   return (
     <theme.PathEditor
@@ -455,7 +399,7 @@ function PathEditor({
   );
 }
 
-function nextAst(ast: AST) {
+function nextAst(ast: AST, defaults: DefaultProvider) {
   if (ast.type !== "path") {
     // @ts-ignore
     if (ast.value && !isNaN(ast.value)) {
@@ -464,7 +408,7 @@ function nextAst(ast: AST) {
       return jsonata(ast.value).ast();
     } else {
       // Numbers aren't valid paths, so we can't just switch to them
-      return defaultPath();
+      return defaults.defaultPath();
     }
   } else if (ast.type === "path") {
     return { type: "string", value: serializer(ast) };
@@ -522,24 +466,14 @@ function toEditableText(ast: AST) {
   }
 }
 
-function TypeSwitch({
-  ast,
-  onChange
-}: NodeEditorProps<LiteralNode | PathNode>) {
-  const changeType = () => onChange(nextAst(ast));
-  const { theme } = Context.useContainer();
-  return (
-    <theme.TypeSwitch ast={ast} onChange={onChange} changeType={changeType} />
-  );
-}
-
 function CoercibleValueEditor({
   ast,
   onChange,
   validator,
   cols = "5"
 }: NodeEditorProps<LiteralNode>) {
-  const { theme } = Context.useContainer();
+  const { theme, defaultProvider } = Context.useContainer();
+  const changeType = () => onChange(nextAst(ast, defaultProvider));
   // let error = validator && validator(ast);
   const text = toEditableText(ast);
   const onChangeText = (newText: string) => onChange(autoCoerce(newText));
@@ -549,6 +483,7 @@ function CoercibleValueEditor({
       text={text}
       onChange={onChange}
       onChangeText={onChangeText}
+      changeType={changeType}
       cols={cols}
     />
   );
@@ -557,7 +492,7 @@ function CoercibleValueEditor({
 function BlockEditor({ ast, onChange }: NodeEditorProps<BlockNode>) {
   const { theme } = Context.useContainer();
 
-  const children = ast.expressions.map((exp, idx) => (
+  const children = ast.expressions.map((exp: AST, idx: number) => (
     <NodeEditor
       key={exp}
       ast={exp}
@@ -667,7 +602,7 @@ function VariableEditor({
 }
 
 function ConditionEditor({ ast, onChange }: NodeEditorProps<ConditionNode>) {
-  const { theme } = Context.useContainer();
+  const { theme, defaultProvider } = Context.useContainer();
 
   const flattened = flattenConditions({ ast, onChange });
   const { pairs } = flattened;
@@ -685,7 +620,7 @@ function ConditionEditor({ ast, onChange }: NodeEditorProps<ConditionNode>) {
     last.onChange({
       ...last.ast,
       else: {
-        ...defaultCondition(),
+        ...defaultProvider.defaultCondition(),
         else: flattened.finalElse.ast
       }
     });
@@ -723,7 +658,7 @@ function ObjectUnaryEditor({
   ast,
   onChange
 }: NodeEditorProps<ObjectUnaryNode>) {
-  const { theme } = Context.useContainer();
+  const { theme, defaultProvider } = Context.useContainer();
 
   const removeLast = () => {
     onChange({
@@ -732,7 +667,10 @@ function ObjectUnaryEditor({
     });
   };
   const addNew = () => {
-    const newPair = [defaultString(), defaultComparison()];
+    const newPair = [
+      defaultProvider.defaultString(),
+      defaultProvider.defaultComparison()
+    ];
     onChange({
       ...ast,
       lhs: [...ast.lhs, newPair]
@@ -790,7 +728,7 @@ function withoutIndex<T>(arr: T[], idx: number) {
 }
 
 function ArrayUnaryEditor({ ast, onChange }: NodeEditorProps<ArrayUnaryNode>) {
-  const { theme } = Context.useContainer();
+  const { theme, defaultProvider } = Context.useContainer();
 
   const removeLast = () => {
     onChange({
@@ -801,7 +739,7 @@ function ArrayUnaryEditor({ ast, onChange }: NodeEditorProps<ArrayUnaryNode>) {
   const addNew = () => {
     onChange({
       ...ast,
-      expressions: [...ast.expressions, defaultComparison()]
+      expressions: [...ast.expressions, defaultProvider.defaultComparison()]
     });
   };
   const children = ast.expressions.map((expr: AST, idx: number) => {

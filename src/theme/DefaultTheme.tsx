@@ -24,14 +24,11 @@ import styled from "styled-components";
 import ButtonHelp from "./ButtonHelp";
 import PathPicker from "./PathEditor";
 import {
-  JsonataASTNode,
   BinaryNode,
   PathNode,
   LiteralNode,
   BlockNode,
   ConditionNode,
-  StringNode,
-  NumberNode,
   VariableNode,
   ObjectUnaryNode,
   ArrayUnaryNode
@@ -373,10 +370,12 @@ function LeafValueEditor({
   validator,
   cols = "5",
   onChangeText,
-  text
+  text,
+  changeType
 }: NodeEditorProps<LiteralNode> & {
   text: string;
   onChangeText: OnChange<string>;
+  changeType: Callback;
 }) {
   return (
     <InputGroup as={Col} sm={cols}>
@@ -386,7 +385,7 @@ function LeafValueEditor({
         value={text}
         onChange={e => onChangeText(e.target.value)}
       />
-      <TypeSwitch ast={ast} onChange={onChange} />
+      <TypeSwitch ast={ast} onChange={onChange} changeType={changeType}/>
 
       <Form.Control.Feedback type="invalid">
         {/* {error.message} */}

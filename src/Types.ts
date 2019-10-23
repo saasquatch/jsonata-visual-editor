@@ -1,4 +1,11 @@
-import { JsonataASTNode } from "./jsonata";
+import {
+  JsonataASTNode,
+  StringNode,
+  NumberNode,
+  BinaryNode,
+  ConditionNode,
+  PathNode
+} from "./jsonata";
 import { Theme } from "./Theme";
 import { Path } from "./schema/PathSuggester";
 
@@ -73,6 +80,10 @@ export interface RootNodeEditorProps extends NodeEditorProps<AST> {
    */
   boundVariables?: string[];
   /**
+   * Provides default values for nodes when a new node is created
+   */
+  defaultProvider?: Partial<DefaultProvider>;
+  /**
    * Controls when a String can be swapped to a visual editor.
    *
    * On null can be switched.
@@ -81,6 +92,13 @@ export interface RootNodeEditorProps extends NodeEditorProps<AST> {
   isValidBasicExpression?: (ast: AST) => string | null;
 }
 
+export interface DefaultProvider {
+  defaultString(): StringNode;
+  defaultNumber(): NumberNode;
+  defaultComparison(): BinaryNode;
+  defaultCondition(): ConditionNode;
+  defaultPath(): PathNode;
+}
 /**
  * Used to provide JSON-schema style information about paths.
  *
