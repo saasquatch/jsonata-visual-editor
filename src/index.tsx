@@ -4,7 +4,7 @@ import jsonata from "jsonata";
 
 import { Editor } from "./AstEditor";
 import { DefaultTheme } from "./theme/DefaultTheme";
-import { serializer } from "./core/serializer.ts";
+import { serializer } from "./core/serializer";
 import { AST, combinerOperators } from "./Types";
 import PurchaseEvent from "./example/PurchaseEvent.schema";
 import { makeSchemaProvider } from "./schema/SchemaProvider";

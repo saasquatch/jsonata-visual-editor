@@ -145,3 +145,5 @@ export type JsonataASTNode =
   | ConditionNode
   | BindNode
   | LambdaNode;
+
+export const module = true;

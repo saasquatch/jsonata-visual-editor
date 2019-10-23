@@ -5,7 +5,6 @@ import { createContainer } from "unstated-next";
 
 import { serializer } from "./core/serializer";
 import {
-  JsonataASTNode,
   BinaryNode,
   PathNode,
   LiteralNode,
@@ -14,7 +13,7 @@ import {
   VariableNode,
   ObjectUnaryNode,
   ArrayUnaryNode
-} from "./jsonata";
+} from "./core/jsonata";
 import { Theme } from "./Theme";
 import {
   ParsingState,

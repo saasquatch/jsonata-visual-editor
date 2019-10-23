@@ -5,9 +5,11 @@ import {
   BinaryNode,
   ConditionNode,
   PathNode
-} from "./jsonata";
+} from "./core/jsonata";
 import { Theme } from "./Theme";
 import { Path } from "./schema/PathSuggester";
+
+export module Types{
 
 /**
  * Tracks parsing state for IDE edtiors. Allows for asynchronous parsing.
