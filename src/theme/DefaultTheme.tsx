@@ -157,7 +157,7 @@ function CombinerEditor(
         </InputGroup>
         <Col sm="10">
           {props.children.map(child => (
-            <Form.Row key={child}>{child}</Form.Row>
+            <Form.Row>{child}</Form.Row>
           ))}
           <AddRemoveGroup addNew={props.addNew} removeLast={props.removeLast} />
         </Col>
@@ -385,7 +385,7 @@ function LeafValueEditor({
         value={text}
         onChange={e => onChangeText(e.target.value)}
       />
-      <TypeSwitch ast={ast} onChange={onChange} changeType={changeType}/>
+      <TypeSwitch ast={ast} onChange={onChange} changeType={changeType} />
 
       <Form.Control.Feedback type="invalid">
         {/* {error.message} */}
@@ -514,11 +514,6 @@ export const DefaultTheme = {
   Base,
   RootNodeEditor,
   IDETextarea,
-  /*
-    Icons
-  */
-  Icon: Icon,
-  TypeSwitch,
 
   /*
     Compound editors
@@ -535,8 +530,5 @@ export const DefaultTheme = {
    */
   VariableEditor,
   LeafValueEditor,
-  PathEditor,
-
-  // TODO: Remove this once Theme migration is done
-  AddRemoveGroup
+  PathEditor
 };

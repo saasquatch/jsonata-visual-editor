@@ -1,14 +1,16 @@
 import React, { useState } from "react";
 import ReactDOM from "react-dom";
+import { ButtonGroup, Button } from "react-bootstrap";
+
 import jsonata from "jsonata";
+import { serializer } from "jsonata-ui-core";
 
 import { Editor } from "./AstEditor";
 import { DefaultTheme } from "./theme/DefaultTheme";
-import { serializer } from "jsonata-ui-core";
 import { AST, combinerOperators } from "./Types";
-import PurchaseEvent from "./example/PurchaseEvent.schema";
 import { makeSchemaProvider } from "./schema/SchemaProvider";
-import { ButtonGroup, Button } from "react-bootstrap";
+
+import PurchaseEvent from "./example/PurchaseEvent.schema";
 
 const schemaProvider = makeSchemaProvider(PurchaseEvent);
 
