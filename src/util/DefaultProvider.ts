@@ -4,7 +4,7 @@ import {
   StringNode,
   NumberNode,
   PathNode
-} from "../core/jsonata";
+} from "jsonata-ui-core";
 import { DefaultProvider } from "../Types";
 
 export const StandardDefaultProvider: DefaultProvider = {

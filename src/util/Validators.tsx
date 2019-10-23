@@ -1,4 +1,4 @@
-import { serializer } from "../core/serializer";
+import { serializer } from "jsonata-ui-core";
 import { SchemaProvider, ValidatorError, AST } from "../Types";
 import { isPathNode, isNumberNode } from "../AstEditor";
 

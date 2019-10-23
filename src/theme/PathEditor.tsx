@@ -6,8 +6,7 @@ import { Badge } from "react-bootstrap";
 
 import jsonata from "jsonata";
 
-import { JsonataASTNode } from "./jsonata";
-import { serializer } from "../core/serializer";
+import { serializer, JsonataASTNode } from "jsonata-ui-core";
 import { Path as PathSuggestion } from "../schema/PathSuggester";
 
 type AST = JsonataASTNode;

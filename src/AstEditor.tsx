@@ -3,8 +3,8 @@ import jsonata from "jsonata";
 
 import { createContainer } from "unstated-next";
 
-import { serializer } from "./core/serializer";
 import {
+  serializer,
   BinaryNode,
   PathNode,
   LiteralNode,
@@ -13,7 +13,7 @@ import {
   VariableNode,
   ObjectUnaryNode,
   ArrayUnaryNode
-} from "./core/jsonata";
+} from "jsonata-ui-core";
 import { Theme } from "./Theme";
 import {
   ParsingState,

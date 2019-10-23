@@ -32,7 +32,7 @@ import {
   VariableNode,
   ObjectUnaryNode,
   ArrayUnaryNode
-} from "../core/jsonata";
+} from "jsonata-ui-core";
 import {
   ParsingState,
   Modes,

@@ -5,7 +5,7 @@ import {
   BinaryNode,
   ConditionNode,
   PathNode
-} from "./core/jsonata";
+} from "jsonata-ui-core";
 import { Theme } from "./Theme";
 import { Path } from "./schema/PathSuggester";
 
