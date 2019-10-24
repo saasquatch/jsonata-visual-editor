@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import ReactDOM from "react-dom";
-import { ButtonGroup, Button } from "react-bootstrap";
+import { Col, Badge } from "react-bootstrap";
 
 import jsonata from "jsonata";
-import { serializer } from "jsonata-ui-core";
+import { serializer, ConditionNode } from "jsonata-ui-core";
 
 import { Editor } from "./AstEditor";
 import { DefaultTheme } from "./theme/DefaultTheme";
@@ -11,14 +11,21 @@ import { AST, combinerOperators } from "./Types";
 import { makeSchemaProvider } from "./schema/SchemaProvider";
 
 import PurchaseEvent from "./example/PurchaseEvent.schema";
+import Flowchart from "./example/Flowchart";
 
+// @ts-ignore
 const schemaProvider = makeSchemaProvider(PurchaseEvent);
 
+// (event) => rewardKey
+const apply = jsonata(`foo ~> $lowercase() ~> $contains("bar")`).ast();
 const set = jsonata(`[Q = 0, Q = 1, Q = 3]`).ast();
 const obj = jsonata(`{"one":Q = 0, "two": Q = 1,  "three": Q = 3}`).ast();
 const cond = jsonata(`Q = 0 ? "Tier 1" : Q =1 ? "Tier 2" : "Tier 3"`).ast();
-
-const defaultAst = cond;
+const singleCond = jsonata(
+  `($Q := products[product_id="seat"].quantity; $Q = 0 ? $tier1 : $Q = 1 ? $tier2 : $defaultTier)`
+).ast();
+0;
+const defaultAst: AST = apply as AST;
 const introspection = jsonata(`**[type="name"].value`);
 
 // TODO : Make this recursive, smarter
@@ -37,6 +44,59 @@ function isValidBasicExpression(newValue: AST): string | null {
   return "Can't use basic editor for advanced expressions. Try a simpler expression.";
 }
 
+type VariableEditor = typeof DefaultTheme.VariableEditor;
+
+const CustomVariableEditor: VariableEditor = props => {
+  if (props.ast.value === "Q") {
+    return (
+      <Col sm="5" style={{ textAlign: "right" }}>
+        Tier Variable
+      </Col>
+    );
+  }
+  if (props.ast.value.startsWith("tier")) {
+    return (
+      <Col sm="5" style={{ textAlign: "right", textTransform: "uppercase" }}>
+        <Badge>{props.ast.value}</Badge>
+      </Col>
+    );
+  }
+  return <DefaultTheme.VariableEditor {...props} />;
+};
+
+function NewTierDefault(): ConditionNode {
+  return {
+    type: "condition",
+    condition: {
+      type: "binary",
+      value: "<=",
+      position: undefined,
+      lhs: {
+        value: "Q",
+        type: "variable",
+        position: undefined
+      },
+      rhs: {
+        value: 1,
+        type: "number",
+        position: undefined
+      }
+    },
+    then: {
+      value: "tier4",
+      type: "variable",
+      position: undefined
+    },
+    else: {
+      value: "defaultTier",
+      type: "variable",
+      position: undefined
+    },
+    position: undefined,
+    value: undefined
+  };
+}
+
 function App() {
   const [ast, setAst] = useState(defaultAst);
 
@@ -44,7 +104,7 @@ function App() {
 
   let serializedVersions = [];
   try {
-    serializedVersions.push(serializer(ast));
+    serializedVersions.push(serializer(ast as AST));
   } catch (e) {
     serializedVersions.push(e.message);
   }
@@ -54,7 +114,14 @@ function App() {
   } catch (e) {
     serializedVersions.push(e.message);
   }
-  const boundVariables = ["var", "var1", "var2", "tenantSettings", "tier1Name"];
+  const boundVariables = [
+    "Q",
+    "var",
+    "var1",
+    "var2",
+    "tenantSettings",
+    "tier1Name"
+  ];
 
   return (
     <div>
@@ -72,7 +139,14 @@ function App() {
       <Editor
         ast={ast}
         onChange={setAst}
-        theme={DefaultTheme}
+        theme={{
+          ...DefaultTheme,
+          VariableEditor: CustomVariableEditor
+          // ConditionEditor: Flowchart
+        }}
+        defaultProvider={{
+          defaultCondition: NewTierDefault
+        }}
         isValidBasicExpression={isValidBasicExpression}
         boundVariables={boundVariables}
         schemaProvider={schemaProvider}
@@ -82,6 +156,9 @@ function App() {
           {s}
         </pre>
       ))}
+      {serializedVersions[0] === serializedVersions[1]
+        ? "✓ serialized"
+        : "✗ serializer bug"}
       <div style={{ marginTop: "500px" }}>
         <pre>
           Keys used: {JSON.stringify(keys, null, 2)} {typeof keys} <br />
@@ -89,36 +166,6 @@ function App() {
         </pre>
       </div>
     </div>
-  );
-}
-
-function isCombinerNode(ast: AST) {
-  return (
-    ast.type === "binary" && Object.keys(combinerOperators).includes(ast.value)
-  );
-}
-
-function CustomRoot({ editor, ast }: { editor: JSX.Element; ast: AST }) {
-  return (
-    <>
-      {editor}
-      {isCombinerNode(ast) && (
-        <ButtonGroup>
-          <Button
-            variant="secondary"
-            onClick={newBinaryAdder("and", ast, props.onChange)}
-          >
-            + And
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={newBinaryAdder("or", ast, props.onChange)}
-          >
-            + Or
-          </Button>
-        </ButtonGroup>
-      )}
-    </>
   );
 }
 

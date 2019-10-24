@@ -12,7 +12,9 @@ import {
   ConditionNode,
   VariableNode,
   ObjectUnaryNode,
-  ArrayUnaryNode
+  ArrayUnaryNode,
+  ApplyNode,
+  FunctionNode
 } from "jsonata-ui-core";
 import { Theme } from "./Theme";
 import {
@@ -131,6 +133,10 @@ function NodeEditor(props: NodeEditorProps<AST>) {
     return <VariableEditor {...rest} ast={ast} />;
   } else if (ast.type === "bind") {
     return <BindEditor {...rest} ast={ast} />;
+  } else if (ast.type === "apply") {
+    return <ApplyEditor {...rest} ast={ast} />;
+  } else if (ast.type === "function") {
+    return <FunctionEditor {...rest} ast={ast} />;
   } else if (ast.type === "unary" && ast.value === "{") {
     return <ObjectUnaryEditor {...rest} ast={ast as ObjectUnaryNode} />;
   } else if (ast.type === "unary" && ast.value === "[") {
@@ -169,7 +175,7 @@ function useIDEHook({
       let newAst: AST;
       let error = undefined;
       try {
-        newAst = jsonata(newText).ast();
+        newAst = jsonata(newText).ast() as AST;
         if (validator) {
           await validator(newAst);
         }
@@ -495,7 +501,6 @@ function BlockEditor({ ast, onChange }: NodeEditorProps<BlockNode>) {
 
   const children = ast.expressions.map((exp: AST, idx: number) => (
     <NodeEditor
-      key={exp}
       ast={exp}
       onChange={newAst => {
         const newExpressions: AST[] = [...ast.expressions];
@@ -799,4 +804,90 @@ function ArrayUnaryEditor({ ast, onChange }: NodeEditorProps<ArrayUnaryNode>) {
       removeLast={removeLast}
     />
   );
+}
+
+function ApplyEditor(props: NodeEditorProps<ApplyNode>) {
+  const { theme } = Context.useContainer();
+
+  const { baseLeft, chain } = flattenApply(props.ast, props.onChange);
+  console.log("props", baseLeft, chain);
+  const lhs = <NodeEditor {...baseLeft} />;
+  const children = chain.map(c => (
+    <NodeEditor ast={c.ast} onChange={c.onChange} />
+  ));
+  return (
+    <theme.ApplyEditor
+      ast={props.ast}
+      onChange={props.onChange}
+      lhs={lhs}
+      children={children}
+    />
+  );
+}
+
+type FlattenResult = {
+  baseLeft: FlattenerProps;
+  chain: FlattenerProps[];
+};
+function flattenApply(ast: ApplyNode, onChange: OnChange): FlattenResult {
+  if (ast.type === "apply") {
+    const right = {
+      ast: ast.rhs,
+      onChange: newAst => {
+        onChange({
+          ...ast,
+          rhs: newAst
+        });
+      }
+    };
+    if (ast.lhs.type === "apply") {
+      const child = flattenApply(ast.lhs, newAst => {
+        onChange({
+          ...ast,
+          lhs: newAst
+        });
+      });
+      return {
+        baseLeft: child.baseLeft,
+        chain: [...child.chain, right]
+      };
+    } else {
+      return {
+        baseLeft: {
+          ast: ast.lhs,
+          onChange: newAst => {
+            onChange({
+              ...ast,
+              lhs: newAst
+            });
+          }
+        },
+        chain: [right]
+      };
+    }
+  } else {
+    return {
+      baseLeft: {
+        ast,
+        onChange
+      },
+      chain: []
+    };
+  }
+}
+
+function FunctionEditor({ ast, onChange }: NodeEditorProps<FunctionNode>) {
+  const { theme } = Context.useContainer();
+  const args = ast.arguments.map((a, idx) => {
+    const changeArg = (newAst: AST) => {
+      const newArgs: AST[] = [...ast.arguments];
+      newArgs[idx] = newAst;
+      onChange({
+        ...ast,
+        arguments: newArgs
+      });
+    };
+    return <NodeEditor ast={a} onChange={changeArg} />;
+  });
+  return <theme.FunctionEditor ast={ast} onChange={onChange} args={args} />;
 }

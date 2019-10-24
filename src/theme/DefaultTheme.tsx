@@ -31,7 +31,8 @@ import {
   ConditionNode,
   VariableNode,
   ObjectUnaryNode,
-  ArrayUnaryNode
+  ArrayUnaryNode,
+  FunctionNode
 } from "jsonata-ui-core";
 import {
   ParsingState,
@@ -169,14 +170,19 @@ function CombinerEditor(
 type AddRemoveGroupProps = {
   addNew: Callback;
   removeLast: Callback;
+  canDelete?: boolean;
 };
-function AddRemoveGroup({ addNew, removeLast }: AddRemoveGroupProps) {
+function AddRemoveGroup({
+  addNew,
+  removeLast,
+  canDelete = true
+}: AddRemoveGroupProps) {
   return (
     <ButtonGroup>
       <Button variant="secondary" onClick={addNew}>
         Add
       </Button>
-      <Button variant="secondary" onClick={removeLast}>
+      <Button variant="secondary" onClick={removeLast} disabled={!canDelete}>
         x Remove Last
       </Button>
     </ButtonGroup>
@@ -235,7 +241,11 @@ function ConditionEditor({
           })}
           <tr>
             <td>
-              <AddRemoveGroup addNew={addNew} removeLast={removeLast} />
+              <AddRemoveGroup
+                addNew={addNew}
+                removeLast={removeLast}
+                canDelete={canDelete}
+              />
             </td>
             <td>
               Default:
@@ -507,6 +517,59 @@ function ComparisonEditor({
   );
 }
 
+function ApplyEditor({
+  lhs,
+  children,
+  ast
+}: NodeEditorProps<ApplyNode> & {
+  lhs: JSX.Element;
+  children: Children;
+}) {
+  return (
+    <>
+      <Form.Row>
+        {lhs}
+        <Col sm="7">
+          <Table>
+            <tr>
+              {children.map(c => (
+                <>
+                  <td>~></td>
+                  <td>{c}</td>
+                </>
+              ))}
+            </tr>
+          </Table>
+        </Col>
+      </Form.Row>
+    </>
+  );
+}
+
+function FunctionEditor({
+  args,
+  ast
+}: NodeEditorProps<FunctionNode> & {
+  args: Children;
+}) {
+  return (
+    <>
+      <Form.Row>
+        <code>${ast.procedure.value}</code>
+        <Table>
+          <tr>
+            {args.map(c => (
+              <tr>
+                <td>{c}</td>
+              </tr>
+            ))}
+          </tr>
+        </Table>
+      </Form.Row>
+    </>
+  );
+}
+
 function BindEditor({
   lhs,
   rhs
@@ -542,6 +605,8 @@ export const DefaultTheme = {
   ConditionEditor,
   ObjectUnaryEditor,
   ArrayUnaryEditor,
+  ApplyEditor,
+  FunctionEditor,
 
   /*
     Leaf editors
