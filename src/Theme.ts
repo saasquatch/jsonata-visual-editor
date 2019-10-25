@@ -101,7 +101,7 @@ export type LeafValueEditorProps = NodeEditorProps<LiteralNode> & {
 
 export type PathEditorProps = NodeEditorProps<PathNode> & {
   changeType: Callback;
-  schemaProvider: SchemaProvider;
+  schemaProvider?: SchemaProvider;
 };
 
 export type BaseEditorProps = {

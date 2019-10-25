@@ -6,9 +6,9 @@
     "jsonata"
   ],
   "source": "src/AstEditor.tsx",
-  "main": "dist/index.js",
-  "module": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/AstEditor.js",
+  "module": "dist/AstEditor.mjs",
+  "types": "dist/AstEditor.d.ts",
   "files": [
     "dist"
   ],
@@ -33,7 +33,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "microbundle",
+    "build": "microbundle -f cjs,es",
     "dev": "microbundle watch",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"

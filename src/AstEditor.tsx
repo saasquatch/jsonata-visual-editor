@@ -17,7 +17,6 @@ import {
   FunctionNode,
   BindNode
 } from "jsonata-ui-core";
-import { Theme } from "./Theme";
 import {
   ParsingState,
   SchemaProvider,
@@ -30,22 +29,15 @@ import {
   AST,
   combinerOperators,
   comparionsOperators,
-  numberOperators
+  Container
 } from "./Types";
-import { Validators } from "./util/Validators";
 import { StandardDefaultProvider } from "./util/DefaultProvider";
 
 // re-export types for theming purposes
 import * as Types from "./Types";
+import * as PathSuggester from "./schema/PathSuggester"
 export * from "./Theme";
-export { Types };
-
-type Container = {
-  schemaProvider?: SchemaProvider;
-  theme: Theme;
-  boundVariables?: string[];
-  defaultProvider: DefaultProvider;
-};
+export { Types, PathSuggester };
 
 function useEditorContext(initialState: Container | undefined): Container {
   if (initialState === undefined) {
@@ -61,7 +53,7 @@ function useEditorContext(initialState: Container | undefined): Container {
   return { schemaProvider, theme, boundVariables, defaultProvider };
 }
 
-const Context = createContainer(useEditorContext);
+export const Context = createContainer(useEditorContext);
 
 // See all the AST types: https://github.com/mtiller/jsonata/blob/ts-2.0/src/parser/ast.ts
 // const NestedPathValue = jsonata(`$join(steps.value,".")`);
@@ -307,6 +299,10 @@ function flattenBinaryNodesThatMatch({
   ast,
   onChange,
   parentType
+}: {
+  ast: AST;
+  onChange: OnChange;
+  parentType: string;
 }): NodeEditorProps<AST>[] {
   if (ast.type === "binary" && ast.value === parentType) {
     // Flatten
@@ -328,7 +324,15 @@ function flattenBinaryNodesThatMatch({
   }
 }
 
-function buildFlattenedBinaryValueSwap({ ast, parentType, newValue }) {
+function buildFlattenedBinaryValueSwap({
+  ast,
+  parentType,
+  newValue
+}: {
+  ast: AST;
+  parentType: String;
+  newValue: BinaryNode["value"];
+}): AST {
   if (ast.type === "binary" && ast.value === parentType) {
     return {
       ...ast,
@@ -365,8 +369,8 @@ function CombinerEditor(props: CombinerProps): JSX.Element {
       value: props.ast.value,
       lhs: props.ast,
       rhs: defaultProvider.defaultComparison(),
-      position: undefined
-    });
+      position: 0
+    } as BinaryNode);
 
   const onChange = (val: AST) =>
     props.onChange(
@@ -417,14 +421,19 @@ function nextAst(ast: AST, defaults: DefaultProvider): AST {
   if (ast.type !== "path") {
     // @ts-ignore
     if (ast.value && !isNaN(ast.value)) {
-      return jsonata(ast.value as string).ast() as AST;
+      try {
+        return jsonata(ast.value as string).ast() as AST;
+      } catch (e) {
+        return defaults.defaultPath();
+      }
     } else {
       // Numbers aren't valid paths, so we can't just switch to them
       return defaults.defaultPath();
     }
   } else if (ast.type === "path") {
-    return { type: "string", value: serializer(ast), position: null };
+    return { type: "string", value: serializer(ast), position: 0 } as AST;
   }
+  throw new Error("Unhandled AST type");
 }
 
 function isNumber(str: string): boolean {
@@ -440,7 +449,7 @@ function autoCoerce(newValue: string): AST {
     return {
       type: "number",
       value: parseFloat(newValue),
-      position: undefined
+      position: 0
     };
   } else if (["true", "false", "null"].includes(cleanVal)) {
     let value: any;
@@ -457,15 +466,15 @@ function autoCoerce(newValue: string): AST {
     return {
       type: "value",
       value: value,
-      position: undefined
-    };
-  } else {
-    return {
-      type: "string",
-      value: newValue,
-      position: undefined
+      position: 0
     };
   }
+
+  return {
+    type: "string",
+    value: newValue,
+    position: 0
+  };
 }
 
 function toEditableText(ast: AST): string {

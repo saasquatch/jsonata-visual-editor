@@ -47,7 +47,13 @@ import {
   NodeEditorProps,
   SchemaProvider
 } from "../Types";
-import { IDETextareaProps, CombinerEditorProps, BlockEditorProps, ConditionEditorProps, ConditionEditorProps, ComparisonEditorProps } from "../Theme";
+import {
+  IDETextareaProps,
+  CombinerEditorProps,
+  ConditionEditorProps,
+  ConditionEditorProps,
+  ComparisonEditorProps
+} from "../Theme";
 
 // import { Theme, Icons } from "./Theme";
 type Callback = () => void;
@@ -131,9 +137,7 @@ function IDETextarea(props: IDETextareaProps) {
   );
 }
 
-function CombinerEditor(
-  props: CombinerEditorProps
-) {
+function CombinerEditor(props: CombinerEditorProps) {
   return (
     <Inset>
       <Form.Row>
@@ -183,11 +187,7 @@ function AddRemoveGroup({
   );
 }
 
-function BlockEditor({
-  ast,
-  onChange,
-  children
-}:BlockEditorProps) {
+function BlockEditor({ ast, onChange, children }: BlockEditorProps) {
   return <Inset>{children}</Inset>;
 }
 
@@ -391,12 +391,7 @@ function PathEditor({
   );
 }
 
-function Base({
-  toggleMode,
-  toggleBlock,
-  mode,
-  editor
-}: BaseEditorProps) {
+function Base({ toggleMode, toggleBlock, mode, editor }: BaseEditorProps) {
   return (
     <div>
       <div style={{ float: "right" }}>
@@ -414,9 +409,7 @@ function Base({
     </div>
   );
 }
-function RootNodeEditor({
-  editor
-}: RootNodeEditorProps) {
+function RootNodeEditor({ editor }: RootNodeEditorProps) {
   return editor;
 }
 
@@ -465,11 +458,7 @@ function ComparisonEditor({
   );
 }
 
-function ApplyEditor({
-  lhs,
-  children,
-  ast
-}: ApplyEditorProps) {
+function ApplyEditor({ lhs, children, ast }: ApplyEditorProps) {
   if (children.length === 1) {
     // Single apply, similar to binarynode
     return (
@@ -537,10 +526,7 @@ function FunctionEditor({
   );
 }
 
-function BindEditor({
-  lhs,
-  rhs
-}: BindEditorProps) {
+function BindEditor({ lhs, rhs }: BindEditorProps) {
   return (
     <>
       <Form.Row>

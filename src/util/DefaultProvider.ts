@@ -14,18 +14,21 @@ export const StandardDefaultProvider: DefaultProvider = {
   defaultCondition,
   defaultPath
 };
+function defaultPosition(){
+  return 0;
+}
 function defaultString(): StringNode {
   return {
     value: "text",
     type: "string",
-    position: undefined
+    position: defaultPosition()
   };
 }
 function defaultNumber(): NumberNode {
   return {
     value: 0,
     type: "number",
-    position: undefined
+    position: defaultPosition()
   };
 }
 function defaultComparison(): BinaryNode {
@@ -34,7 +37,7 @@ function defaultComparison(): BinaryNode {
     value: "=",
     lhs: defaultPath(),
     rhs: defaultNumber(),
-    position: undefined
+    position: defaultPosition()
   };
 }
 function defaultCondition(): ConditionNode {
@@ -43,7 +46,7 @@ function defaultCondition(): ConditionNode {
     condition: defaultComparison(),
     then: defaultString(),
     else: defaultString(),
-    position: undefined,
+    position: defaultPosition(),
     value: undefined
   };
 }
@@ -58,7 +61,7 @@ export function defaultPath(): PathNode {
         position: 0
       }
     ],
-    position: undefined,
+    position: defaultPosition(),
     value: undefined
   };
 }

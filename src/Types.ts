@@ -64,6 +64,16 @@ export interface NodeEditorProps<NodeType extends AST> {
 }
 
 /**
+ * An unstated-next container that allows access to global context variables
+ */
+export type Container = {
+  schemaProvider?: SchemaProvider;
+  theme: Theme;
+  boundVariables?: string[];
+  defaultProvider: DefaultProvider;
+};
+
+/**
  * Props for the base editor.
  */
 export interface RootNodeEditorProps extends NodeEditorProps<AST> {
@@ -138,7 +148,7 @@ export const numberOperators = {
   "<": "less than",
   "<=": "less than or equal",
   ">=": "greater than or equal"
-};
+} as const;
 
 /**
  * Base operators that apply to all types (string, number, boolean, null)
@@ -146,14 +156,14 @@ export const numberOperators = {
 export const baseOperators = {
   "=": "equals",
   "!=": "not equals"
-};
+} as const;
 
 /**
  * Only applies to array functions
  */
 export const arrayOperators = {
   in: "array contains"
-};
+} as const;
 
 /**
  * Set of all comparion operators. These operators should all return boolean values.
@@ -162,7 +172,7 @@ export const comparionsOperators = {
   ...baseOperators,
   ...numberOperators,
   ...arrayOperators
-};
+} as const;
 
 /**
  * Combiner operators. These operators should return boolean values
@@ -170,7 +180,7 @@ export const comparionsOperators = {
 export const combinerOperators = {
   and: "and",
   or: "or"
-};
+} as const;
 
 /**
  * Math operators. These operators should return number values
@@ -181,11 +191,11 @@ export const mathOperators = {
   "*": "times",
   "/": "divided by",
   "%": "modulo"
-};
+} as const;
 
 export const stringOperators = {
   "&": "concatenate"
-};
+} as const;
 
 /**
  * Set of *all* binary operators
@@ -195,4 +205,4 @@ export const operators = {
   ...mathOperators,
   ...combinerOperators,
   ...stringOperators
-};
+} as const;
