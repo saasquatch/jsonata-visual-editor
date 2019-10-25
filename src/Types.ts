@@ -76,13 +76,21 @@ export type Container = {
 /**
  * Props for the base editor.
  */
-export interface RootNodeEditorProps extends NodeEditorProps<AST> {
+export interface EditorProps extends NodeEditorProps<AST> {
   /**
    * A theme to use for styling the editor. See the default theme, based on Bootstrap4.
    */
   theme: Theme;
   /**
+   * A JSON Schema for path suggestions and validation.
+   * 
+   * `schemaProvider` will override the default provider from `schema`
+   */
+  schema?: any;
+  /**
    * An optional shema provider. Used for path completion
+   * 
+   * Will override the default schema provider via (schema)
    */
   schemaProvider?: SchemaProvider;
   /**
@@ -137,72 +145,3 @@ export interface ValidatorError {
   // Human-friendly error message
   message: string;
 }
-
-/**
- * Binary operators that apply (mostly) to numbers.
- *
- * These do work with string, boolean, etc. but they don't make sense for most end-users
- */
-export const numberOperators = {
-  ">": "greater than",
-  "<": "less than",
-  "<=": "less than or equal",
-  ">=": "greater than or equal"
-} as const;
-
-/**
- * Base operators that apply to all types (string, number, boolean, null)
- */
-export const baseOperators = {
-  "=": "equals",
-  "!=": "not equals"
-} as const;
-
-/**
- * Only applies to array functions
- */
-export const arrayOperators = {
-  in: "array contains"
-} as const;
-
-/**
- * Set of all comparion operators. These operators should all return boolean values.
- */
-export const comparionsOperators = {
-  ...baseOperators,
-  ...numberOperators,
-  ...arrayOperators
-} as const;
-
-/**
- * Combiner operators. These operators should return boolean values
- */
-export const combinerOperators = {
-  and: "and",
-  or: "or"
-} as const;
-
-/**
- * Math operators. These operators should return number values
- */
-export const mathOperators = {
-  "-": "minus",
-  "+": "plus",
-  "*": "times",
-  "/": "divided by",
-  "%": "modulo"
-} as const;
-
-export const stringOperators = {
-  "&": "concatenate"
-} as const;
-
-/**
- * Set of *all* binary operators
- */
-export const operators = {
-  ...comparionsOperators,
-  ...mathOperators,
-  ...combinerOperators,
-  ...stringOperators
-} as const;

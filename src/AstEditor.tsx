@@ -19,25 +19,27 @@ import {
 } from "jsonata-ui-core";
 import {
   ParsingState,
-  SchemaProvider,
   NodeEditorProps,
-  RootNodeEditorProps,
   DefaultProvider,
   Mode,
   Modes,
   OnChange,
   AST,
-  combinerOperators,
-  comparionsOperators,
   Container
 } from "./Types";
+import * as _consts from "./Consts";
 import { StandardDefaultProvider } from "./util/DefaultProvider";
 
-// re-export types for theming purposes
 import * as Types from "./Types";
-import * as PathSuggester from "./schema/PathSuggester"
+import _paths from "./schema/PathSuggester";
+import * as SchemaProvider from "./schema/SchemaProvider"
+// re-export types for theming purposes
 export * from "./Theme";
-export { Types, PathSuggester };
+export * from "./Types";
+
+export {SchemaProvider}
+export const Consts = _consts;
+export const PathSuggester = _paths;
 
 function useEditorContext(initialState: Container | undefined): Container {
   if (initialState === undefined) {
@@ -61,7 +63,7 @@ export const Context = createContainer(useEditorContext);
 export const isNumberNode = (n: AST) => n.type === "number";
 export const isPathNode = (n: AST) => n.type === "path";
 
-export function Editor(props: RootNodeEditorProps) {
+export function Editor(props: Types.EditorProps) {
   const [mode, setMode] = useState<Mode>(
     // props.ast.type === "binary" ? NodeMode : IDEMode
     Modes.IDEMode as Mode
@@ -81,11 +83,12 @@ export function Editor(props: RootNodeEditorProps) {
     }
   }
 
-  const { schemaProvider, theme, defaultProvider = {} } = props;
+  const { schema, schemaProvider, theme, defaultProvider = {} } = props;
   const defaults: DefaultProvider = {
     ...StandardDefaultProvider,
     ...defaultProvider
   };
+  const provider = schema ? SchemaProvider.makeSchemaProvider(schema) : schemaProvider;
 
   let editor =
     mode === Modes.NodeMode ? (
@@ -100,7 +103,7 @@ export function Editor(props: RootNodeEditorProps) {
 
   return (
     <Context.Provider
-      initialState={{ schemaProvider, theme, defaultProvider: defaults }}
+      initialState={{ schemaProvider: provider, theme, defaultProvider: defaults }}
     >
       <theme.Base
         editor={editor}
@@ -236,10 +239,10 @@ function RootNodeEditor(props: NodeEditorProps<AST>): JSX.Element {
 }
 
 function BinaryEditor(props: NodeEditorProps<BinaryNode>) {
-  if (Object.keys(combinerOperators).includes(props.ast.value)) {
+  if (Object.keys(Consts.combinerOperators).includes(props.ast.value)) {
     return <CombinerEditor {...props} />;
   }
-  if (Object.keys(comparionsOperators).includes(props.ast.value)) {
+  if (Object.keys(Consts.comparionsOperators).includes(props.ast.value)) {
     return <ComparisonEditor {...props} />;
   }
   throw new Error("Unimplemented binary node");
@@ -392,7 +395,7 @@ function CombinerEditor(props: CombinerProps): JSX.Element {
       onChange={onChange}
       removeLast={removeLast}
       addNew={addNew}
-      combinerOperators={combinerOperators}
+      combinerOperators={Consts.combinerOperators}
     />
   );
 }
