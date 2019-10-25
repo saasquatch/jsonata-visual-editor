@@ -876,9 +876,12 @@ function flattenApply(ast: ApplyNode, onChange: OnChange): FlattenResult {
   }
 }
 
-function FunctionEditor({ ast, onChange }: NodeEditorProps<FunctionNode>) {
+function FunctionEditor({
+  ast,
+  onChange
+}: NodeEditorProps<FunctionNode>): JSX.Element {
   const { theme } = Context.useContainer();
-  const args = ast.arguments.map((a, idx) => {
+  const args: JSX.Element[] = ast.arguments.map((a, idx) => {
     const changeArg = (newAst: AST) => {
       const newArgs: AST[] = [...ast.arguments];
       newArgs[idx] = newAst;
@@ -889,5 +892,20 @@ function FunctionEditor({ ast, onChange }: NodeEditorProps<FunctionNode>) {
     };
     return <NodeEditor ast={a} onChange={changeArg} />;
   });
-  return <theme.FunctionEditor ast={ast} onChange={onChange} args={args} />;
+  const changeProcedure = (value: string) =>
+    onChange({
+      ...ast,
+      procedure: {
+        ...ast.procedure,
+        value
+      }
+    });
+  return (
+    <theme.FunctionEditor
+      ast={ast}
+      onChange={onChange}
+      args={args}
+      changeProcedure={changeProcedure}
+    />
+  );
 }

@@ -17,7 +17,7 @@ import Flowchart from "./example/Flowchart";
 const schemaProvider = makeSchemaProvider(PurchaseEvent);
 
 // (event) => rewardKey
-const apply = jsonata(`foo ~> $lowercase() ~> $contains("bar")`).ast();
+const apply = jsonata(`foo ~> $contains("bar")`).ast();
 const set = jsonata(`[Q = 0, Q = 1, Q = 3]`).ast();
 const obj = jsonata(`{"one":Q = 0, "two": Q = 1,  "three": Q = 3}`).ast();
 const cond = jsonata(`Q = 0 ? "Tier 1" : Q =1 ? "Tier 2" : "Tier 3"`).ast();

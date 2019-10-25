@@ -10,7 +10,7 @@
     "@mrblenny/react-flow-chart": "0.0.8",
     "@types/json-schema": "7.0.3",
     "jsonata": "1.7.0",
-    "jsonata-ui-core": "1.7.0",
+    "jsonata-ui-core": "1.7.1",
     "react": "16.8.6",
     "react-bootstrap": "1.0.0-beta.14",
     "react-dom": "16.8.6",

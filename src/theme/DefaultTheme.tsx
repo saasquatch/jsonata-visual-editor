@@ -32,7 +32,8 @@ import {
   VariableNode,
   ObjectUnaryNode,
   ArrayUnaryNode,
-  FunctionNode
+  FunctionNode,
+  ApplyNode
 } from "jsonata-ui-core";
 import {
   ParsingState,
@@ -525,6 +526,17 @@ function ApplyEditor({
   lhs: JSX.Element;
   children: Children;
 }) {
+  if (children.length === 1) {
+    // Single apply, similar to binarynode
+    return (
+      <>
+        <Form.Row>
+          {lhs}
+          {children[0]}
+        </Form.Row>
+      </>
+    );
+  }
   return (
     <>
       <Form.Row>
@@ -548,23 +560,37 @@ function ApplyEditor({
 
 function FunctionEditor({
   args,
-  ast
+  ast,
+  changeProcedure
 }: NodeEditorProps<FunctionNode> & {
   args: Children;
-}) {
+  changeProcedure: OnChange<String>;
+}): JSX.Element {
+  const picker = (
+    <InputGroup as={Col} sm="2">
+      <Form.Control
+        as="select"
+        value={ast.procedure.value}
+        onChange={e => changeProcedure(e.target.value)}
+      >
+        <option value="contains">$contains</option>
+      </Form.Control>
+    </InputGroup>
+  );
+  if (args.length === 1) {
+    return (
+      <>
+        {picker}
+        {args[0]}
+      </>
+    );
+  }
+
   return (
     <>
       <Form.Row>
-        <code>${ast.procedure.value}</code>
-        <Table>
-          <tr>
-            {args.map(c => (
-              <tr>
-                <td>{c}</td>
-              </tr>
-            ))}
-          </tr>
-        </Table>
+        {picker}
+        {args}
       </Form.Row>
     </>
   );
