@@ -24,7 +24,7 @@ const cond = jsonata(`Q = 0 ? "Tier 1" : Q =1 ? "Tier 2" : "Tier 3"`).ast();
 const singleCond = jsonata(
   `($Q := products[product_id="seat"].quantity; $Q = 0 ? $tier1 : $Q = 1 ? $tier2 : $defaultTier)`
 ).ast();
-0;
+
 const defaultAst: AST = apply as AST;
 const introspection = jsonata(`**[type="name"].value`);
 

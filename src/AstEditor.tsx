@@ -34,6 +34,10 @@ import {
 import { Validators } from "./util/Validators";
 import { StandardDefaultProvider } from "./util/DefaultProvider";
 
+// re-export types for theming purposes
+export * from "./Types";
+export * from "./Theme";
+
 type Container = {
   schemaProvider?: SchemaProvider;
   theme: Theme;

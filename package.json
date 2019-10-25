@@ -1,31 +1,39 @@
 {
   "name": "jsonata-visual-editor",
-  "version": "1.0.0",
-  "description": "",
-  "keywords": [],
-  "main": "src/index.js",
+  "version": "0.1.0",
+  "description": "Visual editor for JSONata expressions. Themeable to your needs, default theme is Boostrap 4",
+  "keywords": [
+    "jsonata"
+  ],
+  "source": "src/AstEditor.ts",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "dependencies": {
+    "jsonata": "1.7.0",
+    "jsonata-ui-core": "1.7.1",
+    "react": "16.8.6",
+    "unstated-next": "1.1.0"
+  },
+  "devDependencies": {
     "@ant-design/icons": "2.1.1",
     "@ant-design/icons-react": "2.0.1",
     "@mrblenny/react-flow-chart": "0.0.8",
     "@types/json-schema": "7.0.3",
-    "jsonata": "1.7.0",
-    "jsonata-ui-core": "1.7.1",
-    "react": "16.8.6",
+    "microbundle": "0.11.0",
     "react-bootstrap": "1.0.0-beta.14",
     "react-dom": "16.8.6",
     "react-scripts": "3.2.0",
     "react-select": "3.0.8",
     "styled-components": "4.4.0",
-    "typescript": "3.4.5",
-    "unstated-next": "1.1.0"
-  },
-  "devDependencies": {
-    "typescript": "3.3.3"
+    "typescript": "3.4.5"
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "microbundle",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
   },
