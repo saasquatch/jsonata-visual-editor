@@ -7,7 +7,6 @@
   ],
   "source": "src/AstEditor.tsx",
   "main": "dist/AstEditor.js",
-  "module": "dist/AstEditor.mjs",
   "types": "dist/AstEditor.d.ts",
   "files": [
     "dist"
@@ -33,7 +32,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "microbundle -f cjs,es",
+    "build": "microbundle -f cjs",
     "dev": "microbundle watch",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
