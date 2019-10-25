@@ -33,7 +33,8 @@ import {
   ObjectUnaryNode,
   ArrayUnaryNode,
   FunctionNode,
-  ApplyNode
+  ApplyNode,
+  BindNode
 } from "jsonata-ui-core";
 import {
   ParsingState,
@@ -46,6 +47,7 @@ import {
   NodeEditorProps,
   SchemaProvider
 } from "../Types";
+import { IDETextareaProps, CombinerEditorProps, BlockEditorProps, ConditionEditorProps, ConditionEditorProps, ComparisonEditorProps } from "../Theme";
 
 // import { Theme, Icons } from "./Theme";
 type Callback = () => void;
@@ -110,11 +112,7 @@ function TypeSwitch({
   );
 }
 
-function IDETextarea(props: {
-  textChange: OnChange<string>;
-  text: string;
-  parsing: ParsingState;
-}) {
+function IDETextarea(props: IDETextareaProps) {
   return (
     <div>
       <Form.Control
@@ -134,12 +132,7 @@ function IDETextarea(props: {
 }
 
 function CombinerEditor(
-  props: NodeEditorProps<BinaryNode> & {
-    addNew: Callback;
-    removeLast: Callback;
-    combinerOperators: { [key: string]: string };
-    children: JSX.Element[];
-  }
+  props: CombinerEditorProps
 ) {
   return (
     <Inset>
@@ -194,9 +187,7 @@ function BlockEditor({
   ast,
   onChange,
   children
-}: NodeEditorProps<BlockNode> & {
-  children: Children;
-}) {
+}:BlockEditorProps) {
   return <Inset>{children}</Inset>;
 }
 
@@ -205,16 +196,7 @@ function ConditionEditor({
   removeLast,
   children,
   elseEditor
-}: NodeEditorProps<ConditionNode> & {
-  addNew: Callback;
-  removeLast: Callback;
-  elseEditor: JSX.Element;
-  children: {
-    Then: JSX.Element;
-    Condition: JSX.Element;
-    remove: Callback;
-  }[];
-}) {
+}: ConditionEditorProps) {
   const canDelete = children.length > 1;
   return (
     <>
@@ -263,15 +245,7 @@ function ObjectUnaryEditor({
   children,
   addNew,
   removeLast
-}: NodeEditorProps<ObjectUnaryNode> & {
-  addNew: Callback;
-  removeLast: Callback;
-  children: {
-    key: JSX.Element;
-    value: JSX.Element;
-    remove: Callback;
-  }[];
-}) {
+}: ObjectUnaryEditorProps) {
   const canDelete = children.length > 1;
   return (
     <>
@@ -309,9 +283,7 @@ function VariableEditor({
   onChange,
   cols = "5",
   boundVariables
-}: NodeEditorProps<VariableNode> & {
-  boundVariables: string[];
-}) {
+}: VariableEditorProps) {
   return (
     <InputGroup as={Col} sm={cols}>
       <Form.Control
@@ -337,14 +309,7 @@ function ArrayUnaryEditor({
   children,
   addNew,
   removeLast
-}: NodeEditorProps<ArrayUnaryNode> & {
-  children: {
-    editor: JSX.Element;
-    remove: Callback;
-  }[];
-  addNew: Callback;
-  removeLast: Callback;
-}) {
+}: ArrayUnaryEditorProps) {
   const canDelete = children.length > 1;
   return (
     <>
@@ -383,11 +348,7 @@ function LeafValueEditor({
   onChangeText,
   text,
   changeType
-}: NodeEditorProps<LiteralNode> & {
-  text: string;
-  onChangeText: OnChange<string>;
-  changeType: Callback;
-}) {
+}: LeafValueEditorProps) {
   return (
     <InputGroup as={Col} sm={cols}>
       <Form.Control
@@ -411,10 +372,7 @@ function PathEditor({
   changeType,
   cols = "5",
   schemaProvider
-}: NodeEditorProps<PathNode> & {
-  changeType: Callback;
-  schemaProvider: SchemaProvider;
-}) {
+}: PathEditorProps) {
   const paths = schemaProvider.getPaths;
   return (
     <InputGroup as={Col} sm={cols}>
@@ -438,12 +396,7 @@ function Base({
   toggleBlock,
   mode,
   editor
-}: {
-  toggleMode: Callback;
-  toggleBlock: string;
-  mode: Mode;
-  editor: JSX.Element;
-}) {
+}: BaseEditorProps) {
   return (
     <div>
       <div style={{ float: "right" }}>
@@ -463,9 +416,7 @@ function Base({
 }
 function RootNodeEditor({
   editor
-}: NodeEditorProps<AST> & {
-  editor: JSX.Element;
-}) {
+}: RootNodeEditorProps) {
   return editor;
 }
 
@@ -474,11 +425,7 @@ function ComparisonEditor({
   rhs,
   changeOperator,
   ast
-}: NodeEditorProps<BinaryNode> & {
-  lhs: JSX.Element;
-  rhs: JSX.Element;
-  changeOperator: OnChange<string>;
-}) {
+}: ComparisonEditorProps) {
   return (
     <>
       <Form.Row>
@@ -522,10 +469,7 @@ function ApplyEditor({
   lhs,
   children,
   ast
-}: NodeEditorProps<ApplyNode> & {
-  lhs: JSX.Element;
-  children: Children;
-}) {
+}: ApplyEditorProps) {
   if (children.length === 1) {
     // Single apply, similar to binarynode
     return (
@@ -562,10 +506,7 @@ function FunctionEditor({
   args,
   ast,
   changeProcedure
-}: NodeEditorProps<FunctionNode> & {
-  args: Children;
-  changeProcedure: OnChange<String>;
-}): JSX.Element {
+}: FunctionEditorProps): JSX.Element {
   const picker = (
     <InputGroup as={Col} sm="2">
       <Form.Control
@@ -599,10 +540,7 @@ function FunctionEditor({
 function BindEditor({
   lhs,
   rhs
-}: NodeEditorProps<BinaryNode> & {
-  lhs: JSX.Element;
-  rhs: JSX.Element;
-}) {
+}: BindEditorProps) {
   return (
     <>
       <Form.Row>

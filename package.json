@@ -5,7 +5,7 @@
   "keywords": [
     "jsonata"
   ],
-  "source": "src/AstEditor.ts",
+  "source": "src/AstEditor.tsx",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -34,6 +34,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "microbundle",
+    "dev": "microbundle watch",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
   },

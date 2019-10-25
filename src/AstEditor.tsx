@@ -14,7 +14,8 @@ import {
   ObjectUnaryNode,
   ArrayUnaryNode,
   ApplyNode,
-  FunctionNode
+  FunctionNode,
+  BindNode
 } from "jsonata-ui-core";
 import { Theme } from "./Theme";
 import {
@@ -35,8 +36,9 @@ import { Validators } from "./util/Validators";
 import { StandardDefaultProvider } from "./util/DefaultProvider";
 
 // re-export types for theming purposes
-export * from "./Types";
+import * as Types from "./Types";
 export * from "./Theme";
+export { Types };
 
 type Container = {
   schemaProvider?: SchemaProvider;
@@ -45,12 +47,17 @@ type Container = {
   defaultProvider: DefaultProvider;
 };
 
-function useEditorContext({
-  schemaProvider,
-  theme,
-  boundVariables,
-  defaultProvider
-}: Container) {
+function useEditorContext(initialState: Container | undefined): Container {
+  if (initialState === undefined) {
+    throw new Error("initialState is required!");
+  }
+  const {
+    schemaProvider,
+    theme,
+    boundVariables,
+    defaultProvider
+  } = initialState;
+
   return { schemaProvider, theme, boundVariables, defaultProvider };
 }
 
@@ -67,7 +74,7 @@ export function Editor(props: RootNodeEditorProps) {
     // props.ast.type === "binary" ? NodeMode : IDEMode
     Modes.IDEMode as Mode
   );
-  const [toggleBlock, setToggleBlock] = useState(null);
+  const [toggleBlock, setToggleBlock] = useState<string | null>(null);
 
   const {
     isValidBasicExpression = DefaultValidBasicExpression,
@@ -113,11 +120,11 @@ export function Editor(props: RootNodeEditorProps) {
   );
 }
 
-function DefaultValidBasicExpression(ast: AST) {
-  //
+function DefaultValidBasicExpression(ast: AST): null {
   return null;
 }
-function NodeEditor(props: NodeEditorProps<AST>) {
+
+function NodeEditor(props: NodeEditorProps<AST>): JSX.Element {
   const { ast, ...rest } = props;
   if (ast.type === "binary") {
     return <BinaryEditor {...rest} ast={ast} />;
@@ -175,7 +182,7 @@ function useIDEHook({
       inProgress: true,
       error: undefined
     });
-    setImmediate(async () => {
+    (async () => {
       let newAst: AST;
       let error = undefined;
       try {
@@ -198,7 +205,7 @@ function useIDEHook({
       });
       setError && setError(undefined);
       onChange(newAst);
-    });
+    })();
   }
   return [text, textChange, parsing]; //  as const // Should use `as const` but codesandbox complains
 }
@@ -212,7 +219,7 @@ export function IDEEditor({
   onChange,
   setToggleBlock,
   isValidBasicExpression
-}: IDEEditorProps) {
+}: IDEEditorProps): JSX.Element {
   const { theme } = Context.useContainer();
   const [text, textChange, parsing] = useIDEHook({
     ast,
@@ -230,7 +237,7 @@ export function IDEEditor({
   );
 }
 
-function RootNodeEditor(props: NodeEditorProps<AST>) {
+function RootNodeEditor(props: NodeEditorProps<AST>): JSX.Element {
   const { theme } = Context.useContainer();
   const editor = <NodeEditor {...props} />;
   return <theme.RootNodeEditor {...props} editor={editor} />;
@@ -243,23 +250,20 @@ function BinaryEditor(props: NodeEditorProps<BinaryNode>) {
   if (Object.keys(comparionsOperators).includes(props.ast.value)) {
     return <ComparisonEditor {...props} />;
   }
+  throw new Error("Unimplemented binary node");
   // TODO: Implement MathNode
 }
 
-function ComparisonEditor(props: NodeEditorProps<BinaryNode>) {
-  const { schemaProvider, theme } = Context.useContainer();
+function ComparisonEditor(props: NodeEditorProps<BinaryNode>): JSX.Element {
+  const { theme } = Context.useContainer();
 
-  const shouldSwap = ({ ast }) => ast.value === "in";
-  const swap = shouldSwap(props);
+  const swap = props.ast.value === "in";
   const leftKey = !swap ? "lhs" : "rhs";
   const rightKey = !swap ? "rhs" : "lhs";
-  const validator = Object.keys(numberOperators).includes(props.ast.value)
-    ? Validators(schemaProvider).onlyNumberValidator
-    : null;
 
-  const changeOperator = (value: string) => {
-    const newValue = { ...props.ast, value: value };
-    const swap = (ast: AST) => {
+  const changeOperator = (value: BinaryNode["value"]) => {
+    const newValue: BinaryNode = { ...props.ast, value: value };
+    const swap = (ast: BinaryNode) => {
       return { ...ast, lhs: ast.rhs, rhs: ast.lhs };
     };
     if (props.ast.value === "in" && newValue.value !== "in") {
@@ -278,7 +282,6 @@ function ComparisonEditor(props: NodeEditorProps<BinaryNode>) {
       onChange={(newAst: AST) =>
         props.onChange({ ...props.ast, [leftKey]: newAst })
       }
-      validator={validator}
     />
   );
   const rhs = (
@@ -287,7 +290,6 @@ function ComparisonEditor(props: NodeEditorProps<BinaryNode>) {
       onChange={(newAst: AST) =>
         props.onChange({ ...props.ast, [rightKey]: newAst })
       }
-      validator={validator}
     />
   );
   return (
@@ -349,7 +351,7 @@ function buildFlattenedBinaryValueSwap({ ast, parentType, newValue }) {
 
 type CombinerProps = NodeEditorProps<BinaryNode>;
 
-function CombinerEditor(props: CombinerProps) {
+function CombinerEditor(props: CombinerProps): JSX.Element {
   const { theme, defaultProvider } = Context.useContainer();
   const flattenedBinaryNodes = flattenBinaryNodesThatMatch({
     ast: props.ast,
@@ -360,9 +362,10 @@ function CombinerEditor(props: CombinerProps) {
   const addNew = () =>
     onChange({
       type: "binary",
-      value: props.ast.type,
+      value: props.ast.value,
       lhs: props.ast,
-      rhs: defaultProvider.defaultComparison()
+      rhs: defaultProvider.defaultComparison(),
+      position: undefined
     });
 
   const onChange = (val: AST) =>
@@ -395,7 +398,7 @@ function PathEditor({
   onChange,
   validator,
   cols = "5"
-}: NodeEditorProps<PathNode>) {
+}: NodeEditorProps<PathNode>): JSX.Element {
   const { theme, schemaProvider, defaultProvider } = Context.useContainer();
   const changeType = () => onChange(nextAst(ast, defaultProvider));
 
@@ -410,23 +413,21 @@ function PathEditor({
   );
 }
 
-function nextAst(ast: AST, defaults: DefaultProvider) {
+function nextAst(ast: AST, defaults: DefaultProvider): AST {
   if (ast.type !== "path") {
     // @ts-ignore
     if (ast.value && !isNaN(ast.value)) {
-      // TODO:
-      // @ts-ignore
-      return jsonata(ast.value).ast();
+      return jsonata(ast.value as string).ast() as AST;
     } else {
       // Numbers aren't valid paths, so we can't just switch to them
       return defaults.defaultPath();
     }
   } else if (ast.type === "path") {
-    return { type: "string", value: serializer(ast) };
+    return { type: "string", value: serializer(ast), position: null };
   }
 }
 
-function isNumber(str: string) {
+function isNumber(str: string): boolean {
   if (typeof str !== "string") return false; // we only process strings!
   // could also coerce to string: str = ""+str
   // @ts-ignore -- expect error
@@ -467,7 +468,7 @@ function autoCoerce(newValue: string): AST {
   }
 }
 
-function toEditableText(ast: AST) {
+function toEditableText(ast: AST): string {
   if (ast.type === "string") return ast.value;
   if (ast.type === "number") return ast.value.toString();
   if (ast.type === "value") {
@@ -482,7 +483,7 @@ function CoercibleValueEditor({
   onChange,
   validator,
   cols = "5"
-}: NodeEditorProps<LiteralNode>) {
+}: NodeEditorProps<LiteralNode>): JSX.Element {
   const { theme, defaultProvider } = Context.useContainer();
   const changeType = () => onChange(nextAst(ast, defaultProvider));
   // let error = validator && validator(ast);
@@ -500,7 +501,10 @@ function CoercibleValueEditor({
   );
 }
 
-function BlockEditor({ ast, onChange }: NodeEditorProps<BlockNode>) {
+function BlockEditor({
+  ast,
+  onChange
+}: NodeEditorProps<BlockNode>): JSX.Element {
   const { theme } = Context.useContainer();
 
   const children = ast.expressions.map((exp: AST, idx: number) => (
@@ -509,10 +513,12 @@ function BlockEditor({ ast, onChange }: NodeEditorProps<BlockNode>) {
       onChange={newAst => {
         const newExpressions: AST[] = [...ast.expressions];
         newExpressions[idx] = newAst;
-        onChange({
+        const newBlock: BlockNode = {
           ...ast,
+          // @ts-ignore -- There's something weird going on with the array typing here. Likely caused by jsonata-ui-core?
           expressions: newExpressions
-        });
+        };
+        onChange(newBlock);
       }}
     />
   ));
@@ -599,7 +605,7 @@ function VariableEditor({
   ast,
   onChange,
   cols = "5"
-}: NodeEditorProps<VariableNode>) {
+}: NodeEditorProps<VariableNode>): JSX.Element {
   const { theme, boundVariables = [] } = Context.useContainer();
   return (
     <theme.VariableEditor
@@ -611,7 +617,10 @@ function VariableEditor({
   );
 }
 
-function ConditionEditor({ ast, onChange }: NodeEditorProps<ConditionNode>) {
+function ConditionEditor({
+  ast,
+  onChange
+}: NodeEditorProps<ConditionNode>): JSX.Element {
   const { theme, defaultProvider } = Context.useContainer();
 
   const flattened = flattenConditions({ ast, onChange });
@@ -664,13 +673,15 @@ function ConditionEditor({ ast, onChange }: NodeEditorProps<ConditionNode>) {
   );
 }
 
-function BindEditor({ ast, onChange }: NodeEditorProps<BindNode>) {
+function BindEditor({ ast, onChange }: NodeEditorProps<BindNode>): JSX.Element {
   const { theme } = Context.useContainer();
 
   const lhs = (
     <NodeEditor
       ast={ast.lhs}
-      onChange={(newAst: AST) => onChange({ ...ast, lhs: newAst })}
+      onChange={(newAst: VariableNode) =>
+        onChange({ ...ast, lhs: newAst } as BindNode)
+      }
       // validator={validator}
     />
   );
@@ -688,14 +699,14 @@ function BindEditor({ ast, onChange }: NodeEditorProps<BindNode>) {
 function ObjectUnaryEditor({
   ast,
   onChange
-}: NodeEditorProps<ObjectUnaryNode>) {
+}: NodeEditorProps<ObjectUnaryNode>): JSX.Element {
   const { theme, defaultProvider } = Context.useContainer();
 
   const removeLast = () => {
     onChange({
       ...ast,
       lhs: ast.lhs.slice(0, -1)
-    });
+    } as ObjectUnaryNode);
   };
   const addNew = () => {
     const newPair = [
@@ -705,13 +716,13 @@ function ObjectUnaryEditor({
     onChange({
       ...ast,
       lhs: [...ast.lhs, newPair]
-    });
+    } as ObjectUnaryNode);
   };
   const removeIndex = (idx: number) =>
     onChange({
       ...ast,
       lhs: ast.lhs.filter((_, i) => i !== idx)
-    });
+    } as ObjectUnaryNode);
 
   const children = ast.lhs.map((pair: [AST, AST], idx: number) => {
     const changePair = (newAst: AST, side: 0 | 1) => {
@@ -722,7 +733,7 @@ function ObjectUnaryEditor({
       onChange({
         ...ast,
         lhs: newLhs
-      });
+      } as AST);
     };
     const key = (
       <NodeEditor
@@ -758,7 +769,10 @@ function withoutIndex<T>(arr: T[], idx: number) {
   return [...arr.slice(0, idx), ...arr.slice(idx + 1)];
 }
 
-function ArrayUnaryEditor({ ast, onChange }: NodeEditorProps<ArrayUnaryNode>) {
+function ArrayUnaryEditor({
+  ast,
+  onChange
+}: NodeEditorProps<ArrayUnaryNode>): JSX.Element {
   const { theme, defaultProvider } = Context.useContainer();
 
   const removeLast = () => {
@@ -810,7 +824,7 @@ function ArrayUnaryEditor({ ast, onChange }: NodeEditorProps<ArrayUnaryNode>) {
   );
 }
 
-function ApplyEditor(props: NodeEditorProps<ApplyNode>) {
+function ApplyEditor(props: NodeEditorProps<ApplyNode>): JSX.Element {
   const { theme } = Context.useContainer();
 
   const { baseLeft, chain } = flattenApply(props.ast, props.onChange);
@@ -891,8 +905,9 @@ function FunctionEditor({
       newArgs[idx] = newAst;
       onChange({
         ...ast,
+        // @ts-ignore -- something funky going on here with array types.
         arguments: newArgs
-      });
+      } as FunctionNode);
     };
     return <NodeEditor ast={a} onChange={changeArg} />;
   });
