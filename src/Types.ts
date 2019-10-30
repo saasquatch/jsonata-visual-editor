@@ -76,7 +76,16 @@ export type Container = {
 /**
  * Props for the base editor.
  */
-export interface EditorProps extends NodeEditorProps<AST> {
+export interface EditorProps {
+
+  /**
+   * The current expression value for the editor
+   */
+  text: string;
+  /**
+   * A callback for when the value changes
+   */
+  onChange: (text: string) => void;
   /**
    * A theme to use for styling the editor. See the default theme, based on Bootstrap4.
    */

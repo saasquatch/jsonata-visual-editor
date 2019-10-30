@@ -6,9 +6,11 @@ import {
   INodeInnerDefaultProps,
   INode,
   ILink,
-  IFlowChartCallbacks
+  IFlowChartCallbacks,
+  IChart
 } from "@mrblenny/react-flow-chart";
 import styled from "styled-components";
+import { ConditionEditorProps } from "../Theme";
 
 const Outer = styled.div`
   padding: 30px;
@@ -131,7 +133,7 @@ type Child = {
   remove: () => void;
 };
 
-export default function App(props: ConditionProps) {
+export default function App(props: ConditionEditorProps) {
   const { children } = props;
   const graph = children.reduce(
     (obj: NodesAndLinks, child: Child, idx: number) => {
@@ -148,9 +150,9 @@ export default function App(props: ConditionProps) {
         }
       };
     },
-    {}
+    {} as NodesAndLinks
   );
-  const chartSimple = {
+  const chartSimple:IChart = {
     offset: {
       x: 0,
       y: 0

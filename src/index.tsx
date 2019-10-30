@@ -7,7 +7,7 @@ import { serializer, ConditionNode } from "jsonata-ui-core";
 
 import { Editor } from "./AstEditor";
 import { DefaultTheme } from "./theme/DefaultTheme";
-import { AST, combinerOperators } from "./Types";
+import { AST } from "./Types";
 import { makeSchemaProvider } from "./schema/SchemaProvider";
 
 import PurchaseEvent from "./example/PurchaseEvent.schema";
@@ -17,15 +17,14 @@ import Flowchart from "./example/Flowchart";
 const schemaProvider = makeSchemaProvider(PurchaseEvent);
 
 // (event) => rewardKey
-const apply = jsonata(`foo ~> $contains("bar")`).ast();
-const set = jsonata(`[Q = 0, Q = 1, Q = 3]`).ast();
-const obj = jsonata(`{"one":Q = 0, "two": Q = 1,  "three": Q = 3}`).ast();
-const cond = jsonata(`Q = 0 ? "Tier 1" : Q =1 ? "Tier 2" : "Tier 3"`).ast();
-const singleCond = jsonata(
+const apply = `foo ~> $contains("bar")`
+const set = `[Q = 0, Q = 1, Q = 3]`
+const obj = `{"one":Q = 0, "two": Q = 1,  "three": Q = 3}`
+const cond = `Q = 0 ? "Tier 1" : Q =1 ? "Tier 2" : "Tier 3"`
+const singleCond = 
   `($Q := products[product_id="seat"].quantity; $Q = 0 ? $tier1 : $Q = 1 ? $tier2 : $defaultTier)`
-).ast();
 
-const defaultAst: AST = apply as AST;
+const defaultText: string = apply;
 const introspection = jsonata(`**[type="name"].value`);
 
 // TODO : Make this recursive, smarter
@@ -98,8 +97,9 @@ function NewTierDefault(): ConditionNode {
 }
 
 function App() {
-  const [ast, setAst] = useState(defaultAst);
+  const [text, setText] = useState(defaultText);
 
+  const ast = jsonata(text).ast() as AST;
   const keys = introspection.evaluate(ast);
 
   let serializedVersions = [];
@@ -137,8 +137,8 @@ function App() {
         <button onClick={toAst}>-></button>
       </div> */}
       <Editor
-        ast={ast}
-        onChange={setAst}
+        text={text}
+        onChange={setText}
         theme={{
           ...DefaultTheme,
           VariableEditor: CustomVariableEditor

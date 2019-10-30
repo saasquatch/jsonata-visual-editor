@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import jsonata from "jsonata";
 
 import { createContainer } from "unstated-next";
@@ -32,12 +32,12 @@ import { StandardDefaultProvider } from "./util/DefaultProvider";
 
 import * as Types from "./Types";
 import _paths from "./schema/PathSuggester";
-import * as SchemaProvider from "./schema/SchemaProvider"
+import * as SchemaProvider from "./schema/SchemaProvider";
 // re-export types for theming purposes
 export * from "./Theme";
 export * from "./Types";
 
-export {SchemaProvider}
+export { SchemaProvider };
 export const Consts = _consts;
 export const PathSuggester = _paths;
 
@@ -63,23 +63,60 @@ export const Context = createContainer(useEditorContext);
 export const isNumberNode = (n: AST) => n.type === "number";
 export const isPathNode = (n: AST) => n.type === "path";
 
-export function Editor(props: Types.EditorProps) {
-  const [mode, setMode] = useState<Mode>(
-    // props.ast.type === "binary" ? NodeMode : IDEMode
-    Modes.IDEMode as Mode
-  );
-  const [toggleBlock, setToggleBlock] = useState<string | null>(null);
+type State =
+  | {
+      mode: "NodeMode";
+      ast: AST;
+      toggleBlock: string | null;
+    }
+  | {
+      mode: "IDEMode";
+      ast?: AST;
+      toggleBlock: string | null;
+    };
 
+export function Editor(props: Types.EditorProps) {
   const {
     isValidBasicExpression = DefaultValidBasicExpression,
     ...rest
   } = props;
+  const initialState = (): State => {
+    try {
+      let newAst = jsonata(props.text).ast() as AST;
+      const toggleBlock = isValidBasicExpression(newAst);
+      return {
+        ast: newAst,
+        toggleBlock,
+        mode: (toggleBlock === null ? Modes.NodeMode : Modes.IDEMode) as Mode
+      } as State;
+    } catch (e) {
+      return {
+        toggleBlock: "Parsing error with expression",
+        mode: "IDEMode"
+      } as State;
+    }
+  };
+
+  const [state, setState] = useState<State>(initialState);
+
+  const [onChangeMemo] = useUpDownEffect(props.text, props.onChange, () =>
+    setState(initialState())
+  );
 
   function toggleMode() {
-    if (mode === Modes.NodeMode) {
-      setMode(Modes.IDEMode as Mode);
+    if (state.mode === Modes.NodeMode) {
+      setState({
+        ...state,
+        mode: "IDEMode"
+      });
     } else {
-      setMode(Modes.NodeMode as Mode);
+      // TODO: Need AST from IDE
+      const ast = jsonata(props.text).ast() as AST;
+      setState({
+        ...state,
+        ast: ast,
+        mode: "NodeMode"
+      });
     }
   }
 
@@ -88,11 +125,24 @@ export function Editor(props: Types.EditorProps) {
     ...StandardDefaultProvider,
     ...defaultProvider
   };
-  const provider = schema ? SchemaProvider.makeSchemaProvider(schema) : schemaProvider;
+  const provider = schema
+    ? SchemaProvider.makeSchemaProvider(schema)
+    : schemaProvider;
 
+  const astChange = (newAst: AST) => {
+    const text = serializer(newAst);
+    onChangeMemo(text);
+  };
+  const setToggleBlock = (text: string | null) => {
+    setState({
+      ...state,
+      toggleBlock: text
+    });
+  };
+  const { toggleBlock, mode } = state;
   let editor =
     mode === Modes.NodeMode ? (
-      <RootNodeEditor {...props} />
+      <RootNodeEditor ast={state.ast} onChange={astChange} />
     ) : (
       <IDEEditor
         setToggleBlock={setToggleBlock}
@@ -103,7 +153,11 @@ export function Editor(props: Types.EditorProps) {
 
   return (
     <Context.Provider
-      initialState={{ schemaProvider: provider, theme, defaultProvider: defaults }}
+      initialState={{
+        schemaProvider: provider,
+        theme,
+        defaultProvider: defaults
+      }}
     >
       <theme.Base
         editor={editor}
@@ -152,27 +206,61 @@ function NodeEditor(props: NodeEditorProps<AST>): JSX.Element {
   }
 }
 
-type IDEHookProps = {
-  ast: AST;
-  onChange: OnChange;
-  validator?: (ast: AST) => Promise<boolean>;
-  setError: (error?: string) => void;
+/**
+ *
+ * @param value the prop value
+ * @param onChange the onChange callback
+ * @param effect the effect to call when the downward value changes
+ */
+function useUpDownEffect<T>(
+  value: T,
+  onChange: (v: T) => void,
+  effect: React.EffectCallback
+) {
+  const [upwardValue, setUpward] = useState<T | null>(null);
+  useEffect(() => {
+    if (value !== upwardValue) {
+      setUpward(value);
+      effect();
+    }
+  }, [value]);
+  const upWardChange = (up: T) => {
+    setUpward(up);
+    onChange(up);
+  };
+  return [upWardChange];
+}
+
+type IDEEditorProps = {
+  text: string;
+  onChange: (text: string) => void;
+  setToggleBlock: (text: string | null) => void;
+  isValidBasicExpression(ast: AST): string | null;
 };
-function useIDEHook({
-  ast,
+export function IDEEditor({
+  text,
   onChange,
-  validator,
-  setError
-}: IDEHookProps): [string, (newText: string) => void, ParsingState] {
-  const [text, setText] = useState<string>(serializer(ast));
+  setToggleBlock,
+  isValidBasicExpression
+}: IDEEditorProps): JSX.Element {
+  const { theme } = Context.useContainer();
   const [parsing, setParsing] = useState<ParsingState>({
     inProgress: false,
     error: ""
   });
 
-  function textChange(newText: string) {
-    if (typeof newText !== "string") throw Error("Invalid text");
-    setText(newText);
+  const [onChangeMemo] = useUpDownEffect(text, onChange, doParsing);
+
+  const onChangeAst = (newValue: AST) => {
+    const toggleBlock = isValidBasicExpression(newValue);
+    setToggleBlock(toggleBlock);
+  };
+  const setError = (e?: string) => {
+    setToggleBlock(e ? "Can't switch modes while there is an error." : null);
+  };
+
+  function doParsing() {
+    // Start parsing asynchronously
     setParsing({
       inProgress: true,
       error: undefined
@@ -181,10 +269,10 @@ function useIDEHook({
       let newAst: AST;
       let error = undefined;
       try {
-        newAst = jsonata(newText).ast() as AST;
-        if (validator) {
-          await validator(newAst);
-        }
+        newAst = jsonata(text).ast() as AST;
+        // if (validator) {
+        //   await validator(newAst);
+        // }
       } catch (e) {
         error = "Parsing Error: " + e.message;
         setParsing({
@@ -199,34 +287,16 @@ function useIDEHook({
         error: error
       });
       setError && setError(undefined);
-      onChange(newAst);
+      onChangeAst(newAst);
     })();
   }
-  return [text, textChange, parsing]; //  as const // Should use `as const` but codesandbox complains
-}
 
-type IDEEditorProps = NodeEditorProps<AST> & {
-  setToggleBlock: (text: string | null) => void;
-  isValidBasicExpression(ast: AST): string | null;
-};
-export function IDEEditor({
-  ast,
-  onChange,
-  setToggleBlock,
-  isValidBasicExpression
-}: IDEEditorProps): JSX.Element {
-  const { theme } = Context.useContainer();
-  const [text, textChange, parsing] = useIDEHook({
-    ast,
-    onChange: newValue => {
-      const toggleBlock = isValidBasicExpression(newValue);
-      setToggleBlock(toggleBlock);
-      onChange(newValue);
-    },
-    setError: e => {
-      setToggleBlock(e ? "Can't switch modes while there is an error." : null);
-    }
-  });
+  function textChange(newText: string) {
+    if (typeof newText !== "string") throw Error("Invalid text");
+    onChangeMemo(newText);
+    doParsing();
+  }
+
   return (
     <theme.IDETextarea text={text} textChange={textChange} parsing={parsing} />
   );

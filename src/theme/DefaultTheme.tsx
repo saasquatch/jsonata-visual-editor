@@ -1,4 +1,4 @@
-import React from "react";
+import React, { FormEvent, ElementType } from "react";
 import {
   AntDesignOutline,
   DashboardOutline,
@@ -17,7 +17,8 @@ import {
   ButtonGroup,
   OverlayTrigger,
   Table,
-  Tooltip
+  Tooltip,
+  FormControlProps
 } from "react-bootstrap";
 import styled from "styled-components";
 
@@ -41,19 +42,32 @@ import {
   Modes,
   Mode,
   AST,
-  baseOperators,
-  numberOperators,
-  arrayOperators,
   NodeEditorProps,
   SchemaProvider
 } from "../Types";
 import {
+  baseOperators,
+  numberOperators,
+  arrayOperators,
+} from "../Consts";
+import {
   IDETextareaProps,
   CombinerEditorProps,
   ConditionEditorProps,
-  ConditionEditorProps,
-  ComparisonEditorProps
+  ComparisonEditorProps,
+  BlockEditorProps,
+  ObjectUnaryEditorProps,
+  VariableEditorProps,
+  ArrayUnaryEditorProps,
+  LeafValueEditorProps,
+  PathEditorProps,
+  BaseEditorProps,
+  RootNodeEditorProps,
+  ApplyEditorProps,
+  FunctionEditorProps,
+  BindEditorProps
 } from "../Theme";
+import { ReplaceProps, BsPrefixProps } from "react-bootstrap/helpers";
 
 // import { Theme, Icons } from "./Theme";
 type Callback = () => void;
@@ -125,7 +139,7 @@ function IDETextarea(props: IDETextareaProps) {
         as="textarea"
         rows="3"
         value={props.text}
-        onChange={e => /** @ts-ignore */ props.textChange(e.target.value)}
+        onChange={(e:any) => /** @ts-ignore */ props.textChange(e.target.value)}
       />
       <br />
       {props.parsing.inProgress ? (
@@ -145,7 +159,7 @@ function CombinerEditor(props: CombinerEditorProps) {
           <Form.Control
             as="select"
             value={props.ast.value}
-            onChange={e => props.onChange(e.target.value)}
+            onChange={(e:any) => props.onChange(e.target.value)}
           >
             {Object.keys(props.combinerOperators).map(k => (
               <option key={k} value={k}>
@@ -397,7 +411,7 @@ function Base({ toggleMode, toggleBlock, mode, editor }: BaseEditorProps) {
       <div style={{ float: "right" }}>
         <ButtonHelp
           onClick={toggleMode}
-          disabled={toggleBlock}
+          disabled={toggleBlock?true:false}
           variant="secondary"
           size="sm"
           disabledHelp={toggleBlock}
@@ -427,7 +441,7 @@ function ComparisonEditor({
           <Form.Control
             as="select"
             value={ast.value}
-            onChange={e => changeOperator(e.target.value)}
+            onChange={(e:any) => changeOperator(e.target.value)}
           >
             <optgroup label="Common Operators">
               {Object.keys(baseOperators).map(k => (
@@ -501,7 +515,7 @@ function FunctionEditor({
       <Form.Control
         as="select"
         value={ast.procedure.value}
-        onChange={e => changeProcedure(e.target.value)}
+        onChange={(e:any) => changeProcedure(e.target.value)}
       >
         <option value="contains">$contains</option>
       </Form.Control>

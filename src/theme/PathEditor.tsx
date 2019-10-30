@@ -21,6 +21,10 @@ type Option =
       type: "created";
       label: string;
       value: AST;
+    }
+  | {
+      type: undefined;
+      value: string;
     };
 
 type CustomOptionProps = React.ComponentProps<typeof defaultComponents.Option>;
