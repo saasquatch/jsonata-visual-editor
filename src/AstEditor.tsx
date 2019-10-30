@@ -78,14 +78,13 @@ type State =
 export function Editor(props: Types.EditorProps) {
   const {
     isValidBasicExpression = DefaultValidBasicExpression,
-    ...rest
+    text
   } = props;
   const initialState = (): State => {
     try {
       let newAst = jsonata(props.text).ast() as AST;
       const toggleBlock = isValidBasicExpression(newAst);
       return {
-        ast: newAst,
         toggleBlock,
         mode: (toggleBlock === null ? Modes.NodeMode : Modes.IDEMode) as Mode
       } as State;
@@ -142,12 +141,13 @@ export function Editor(props: Types.EditorProps) {
   const { toggleBlock, mode } = state;
   let editor =
     mode === Modes.NodeMode ? (
-      <RootNodeEditor ast={state.ast} onChange={astChange} />
+      <RootNodeEditor ast={jsonata(text).ast() as AST} onChange={astChange} />
     ) : (
       <IDEEditor
         setToggleBlock={setToggleBlock}
         isValidBasicExpression={isValidBasicExpression}
-        {...rest}
+        onChange={onChangeMemo}
+        text={text}
       />
     );
 
@@ -259,42 +259,40 @@ export function IDEEditor({
     setToggleBlock(e ? "Can't switch modes while there is an error." : null);
   };
 
-  function doParsing() {
+  function doParsing(newText?:string) {
     // Start parsing asynchronously
     setParsing({
       inProgress: true,
       error: undefined
     });
-    (async () => {
-      let newAst: AST;
-      let error = undefined;
-      try {
-        newAst = jsonata(text).ast() as AST;
-        // if (validator) {
-        //   await validator(newAst);
-        // }
-      } catch (e) {
-        error = "Parsing Error: " + e.message;
-        setParsing({
-          inProgress: false,
-          error: error
-        });
-        setError && setError(error);
-        return;
-      }
+    let newAst: AST;
+    let error = undefined;
+    try {
+      newAst = jsonata(newText||text).ast() as AST;
+      // if (validator) {
+      //   await validator(newAst);
+      // }
+    } catch (e) {
+      error = "Parsing Error: " + e.message;
       setParsing({
         inProgress: false,
         error: error
       });
-      setError && setError(undefined);
-      onChangeAst(newAst);
-    })();
+      setError && setError(error);
+      return;
+    }
+    setParsing({
+      inProgress: false,
+      error: error
+    });
+    setError && setError(undefined);
+    onChangeAst(newAst);
   }
 
   function textChange(newText: string) {
     if (typeof newText !== "string") throw Error("Invalid text");
     onChangeMemo(newText);
-    doParsing();
+    doParsing(newText);
   }
 
   return (

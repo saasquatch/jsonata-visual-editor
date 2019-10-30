@@ -393,7 +393,7 @@ function PathEditor({
       <GrowDiv>
         <PathPicker
           value={ast}
-          onChange={option => onChange(option.value)}
+          onChange={option => onChange(option.value as AST)}
           paths={paths}
         />
       </GrowDiv>

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import ReactDOM from "react-dom";
-import { Col, Badge } from "react-bootstrap";
+import { Col, Badge, Button } from "react-bootstrap";
 
 import jsonata from "jsonata";
 import { serializer, ConditionNode } from "jsonata-ui-core";
@@ -17,15 +17,16 @@ import Flowchart from "./example/Flowchart";
 const schemaProvider = makeSchemaProvider(PurchaseEvent);
 
 // (event) => rewardKey
-const apply = `foo ~> $contains("bar")`
-const set = `[Q = 0, Q = 1, Q = 3]`
-const obj = `{"one":Q = 0, "two": Q = 1,  "three": Q = 3}`
-const cond = `Q = 0 ? "Tier 1" : Q =1 ? "Tier 2" : "Tier 3"`
-const singleCond = 
-  `($Q := products[product_id="seat"].quantity; $Q = 0 ? $tier1 : $Q = 1 ? $tier2 : $defaultTier)`
+const apply = `foo ~> $contains("bar")`;
+const set = `[Q = 0, Q = 1, Q = 3]`;
+const obj = `{"one":Q = 0, "two": Q = 1,  "three": Q = 3}`;
+const cond = `Q = 0 ? "Tier 1" : Q =1 ? "Tier 2" : "Tier 3"`;
+const singleCond = `($Q := products[product_id="seat"].quantity; $Q = 0 ? $tier1 : $Q = 1 ? $tier2 : $defaultTier)`;
 
 const defaultText: string = apply;
 const introspection = jsonata(`**[type="name"].value`);
+
+const options = [apply, set, obj, cond, singleCond];
 
 // TODO : Make this recursive, smarter
 const NodeWhitelist = jsonata(`
@@ -99,21 +100,25 @@ function NewTierDefault(): ConditionNode {
 function App() {
   const [text, setText] = useState(defaultText);
 
-  const ast = jsonata(text).ast() as AST;
-  const keys = introspection.evaluate(ast);
-
   let serializedVersions = [];
+  let keys = [];
+  let ast;
   try {
-    serializedVersions.push(serializer(ast as AST));
-  } catch (e) {
-    serializedVersions.push(e.message);
-  }
-  try {
-    const l2 = serializer(jsonata(serializedVersions[0]).ast() as AST);
-    serializedVersions.push(l2);
-  } catch (e) {
-    serializedVersions.push(e.message);
-  }
+    ast = jsonata(text).ast() as AST;
+    keys = introspection.evaluate(ast);
+    try {
+      serializedVersions.push(serializer(ast as AST));
+    } catch (e) {
+      serializedVersions.push(e.message);
+    }
+    try {
+      const l2 = serializer(jsonata(serializedVersions[0]).ast() as AST);
+      serializedVersions.push(l2);
+    } catch (e) {
+      serializedVersions.push(e.message);
+    }
+  } catch (e) {}
+
   const boundVariables = [
     "Q",
     "var",
@@ -159,6 +164,13 @@ function App() {
       {serializedVersions[0] === serializedVersions[1]
         ? "✓ serialized"
         : "✗ serializer bug"}
+
+      <table>
+        <tr><th>Examples</th></tr>
+      {options.map(o => (
+        <tr><td><Button onClick={() => setText(o)}>{o}</Button></td></tr>
+      ))}
+      </table>
       <div style={{ marginTop: "500px" }}>
         <pre>
           Keys used: {JSON.stringify(keys, null, 2)} {typeof keys} <br />

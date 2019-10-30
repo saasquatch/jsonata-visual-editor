@@ -1,4 +1,3 @@
-import { serializer } from "jsonata-ui-core";
 import { SchemaProvider, ValidatorError, AST } from "../Types";
 import { isPathNode, isNumberNode } from "../AstEditor";
 
@@ -8,7 +7,7 @@ export function Validators(schemaProvider: SchemaProvider) {
       let error: ValidatorError;
       if (isPathNode(ast)) {
         const pathType =
-          schemaProvider && schemaProvider.getTypeAtPath(serializer(ast));
+          schemaProvider && schemaProvider.getTypeAtPath(ast);
         if (!pathType) {
           error = null;
         } else if (["integer", "number", "float"].includes(pathType)) {
@@ -29,3 +28,5 @@ export function Validators(schemaProvider: SchemaProvider) {
     }
   };
 }
+
+

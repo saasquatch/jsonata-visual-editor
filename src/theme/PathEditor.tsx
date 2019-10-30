@@ -21,10 +21,6 @@ type Option =
       type: "created";
       label: string;
       value: AST;
-    }
-  | {
-      type: undefined;
-      value: string;
     };
 
 type CustomOptionProps = React.ComponentProps<typeof defaultComponents.Option>;
@@ -55,12 +51,13 @@ const CustomOption = (props: CustomOptionProps) => {
     );
   } else {
     // For new items before they are created.
-    const validPath = isValidNewOption(option.value);
+    const newOption:any = option;
+    const validPath = isValidNewOption(newOption.value);
     return (
       <defaultComponents.Option {...props}>
         {validPath && (
           <div>
-            Create new: <code>{option.value}</code>
+            Create new: <code>{newOption.value}</code>
           </div>
         )}
         {!validPath && <div>Umnmatchable</div>}
