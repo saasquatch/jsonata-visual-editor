@@ -387,7 +387,7 @@ function PathEditor({
   cols = "5",
   schemaProvider
 }: PathEditorProps) {
-  const paths = schemaProvider.getPaths;
+  const paths = schemaProvider && schemaProvider.getPaths;
   return (
     <InputGroup as={Col} sm={cols}>
       <GrowDiv>

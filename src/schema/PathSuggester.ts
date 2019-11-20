@@ -50,7 +50,7 @@ function getPaths(schema: JsonSchema, parentOpts: ParentOpts = {}): Path[] {
   }
   const { type } = schema;
   if (type === "object") {
-    const objectPaths = Object.keys(schema.properties).reduce((acc, k) => {
+    const objectPaths = Object.keys(schema.properties || {}).reduce((acc, k) => {
       const subSchema = schema.properties[k];
       const subPaths: Path[] = getPaths(subSchema, {
         ...parentOpts,
