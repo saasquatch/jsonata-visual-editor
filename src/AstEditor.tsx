@@ -76,10 +76,7 @@ type State =
     };
 
 export function Editor(props: Types.EditorProps) {
-  const {
-    isValidBasicExpression = DefaultValidBasicExpression,
-    text
-  } = props;
+  const { isValidBasicExpression = DefaultValidBasicExpression, text } = props;
   const initialState = (): State => {
     try {
       let newAst = jsonata(props.text).ast() as AST;
@@ -259,7 +256,7 @@ export function IDEEditor({
     setToggleBlock(e ? "Can't switch modes while there is an error." : null);
   };
 
-  function doParsing(newText?:string) {
+  function doParsing(newText?: string) {
     // Start parsing asynchronously
     setParsing({
       inProgress: true,
@@ -268,7 +265,7 @@ export function IDEEditor({
     let newAst: AST;
     let error = undefined;
     try {
-      newAst = jsonata(newText||text).ast() as AST;
+      newAst = jsonata(newText || text).ast() as AST;
       // if (validator) {
       //   await validator(newAst);
       // }
@@ -339,20 +336,24 @@ function ComparisonEditor(props: NodeEditorProps<BinaryNode>): JSX.Element {
       props.onChange(newValue);
     }
   };
+  const lhsProps = {
+    ast:props.ast[leftKey],
+    onChange: (newAst: AST) =>
+      props.onChange({ ...props.ast, [leftKey]: newAst })
+  }
+  const rhsProps = {
+    ast:props.ast[rightKey],
+    onChange: (newAst: AST) =>
+      props.onChange({ ...props.ast, [rightKey]: newAst })
+  }
   const lhs = (
     <NodeEditor
-      ast={props.ast[leftKey]}
-      onChange={(newAst: AST) =>
-        props.onChange({ ...props.ast, [leftKey]: newAst })
-      }
+      {...lhsProps}
     />
   );
   const rhs = (
     <NodeEditor
-      ast={props.ast[rightKey]}
-      onChange={(newAst: AST) =>
-        props.onChange({ ...props.ast, [rightKey]: newAst })
-      }
+     {...rhsProps}
     />
   );
   return (
@@ -361,6 +362,8 @@ function ComparisonEditor(props: NodeEditorProps<BinaryNode>): JSX.Element {
       onChange={props.onChange}
       lhs={lhs}
       rhs={rhs}
+      lhsProps={lhsProps}
+      rhsProps={rhsProps}
       changeOperator={changeOperator}
     />
   );
@@ -452,13 +455,18 @@ function CombinerEditor(props: CombinerProps): JSX.Element {
         parentType: props.ast.value
       })
     );
-  const children = flattenedBinaryNodes.map(c => (
-    <NodeEditor ast={c.ast} onChange={c.onChange} />
-  ));
+  const childNodes = flattenedBinaryNodes.map(c => ({
+    editor: <NodeEditor ast={c.ast} onChange={c.onChange} />,
+    ast: c.ast,
+    onChange: c.onChange
+  }));
+
+  const children = childNodes.map(c => c.editor);
 
   return (
     <theme.CombinerEditor
       children={children}
+      childNodes={childNodes}
       ast={props.ast}
       onChange={onChange}
       removeLast={removeLast}
@@ -587,24 +595,32 @@ function BlockEditor({
 }: NodeEditorProps<BlockNode>): JSX.Element {
   const { theme } = Context.useContainer();
 
-  const children = ast.expressions.map((exp: AST, idx: number) => (
-    <NodeEditor
-      ast={exp}
-      onChange={newAst => {
-        const newExpressions: AST[] = [...ast.expressions];
-        newExpressions[idx] = newAst;
-        const newBlock: BlockNode = {
-          ...ast,
-          // @ts-ignore -- There's something weird going on with the array typing here. Likely caused by jsonata-ui-core?
-          expressions: newExpressions
-        };
-        onChange(newBlock);
-      }}
-    />
-  ));
+  const childNodes = ast.expressions.map((exp: AST, idx: number) => {
+    const changeExpr = newAst => {
+      const newExpressions: AST[] = [...ast.expressions];
+      newExpressions[idx] = newAst;
+      const newBlock: BlockNode = {
+        ...ast,
+        // @ts-ignore -- There's something weird going on with the array typing here. Likely caused by jsonata-ui-core?
+        expressions: newExpressions
+      };
+      onChange(newBlock);
+    };
+    return {
+      editor: <NodeEditor ast={exp} onChange={changeExpr} />,
+      ast: exp,
+      onChange: changeExpr
+    };
+  });
+  const children = childNodes.map(c=>c.editor);
 
   return (
-    <theme.BlockEditor ast={ast} onChange={onChange} children={children} />
+    <theme.BlockEditor
+      ast={ast}
+      onChange={onChange}
+      children={children}
+      childNodes={childNodes}
+    />
   );
 }
 
@@ -735,7 +751,9 @@ function ConditionEditor({
     return {
       Then,
       Condition,
-      remove
+      remove,
+      ast: pair.original.ast,
+      onChange: pair.original.onChange
     };
   });
 
@@ -756,24 +774,26 @@ function ConditionEditor({
 function BindEditor({ ast, onChange }: NodeEditorProps<BindNode>): JSX.Element {
   const { theme } = Context.useContainer();
 
+  const lhsProps = {
+    ast: ast.lhs,
+    onChange: (newAst: VariableNode) => onChange({ ...ast, lhs: newAst } as BindNode)
+  }
+  const rhsProps = {
+    ast: ast.rhs,
+    onChange: (newAst: AST) => onChange({ ...ast, rhs: newAst } as BindNode)
+  }
   const lhs = (
     <NodeEditor
-      ast={ast.lhs}
-      onChange={(newAst: VariableNode) =>
-        onChange({ ...ast, lhs: newAst } as BindNode)
-      }
-      // validator={validator}
+      {...lhsProps}
     />
   );
   const rhs = (
     <NodeEditor
-      ast={ast.rhs}
-      onChange={(newAst: AST) => onChange({ ...ast, rhs: newAst })}
-      // validator={validator}
+      {...rhsProps}
     />
   );
 
-  return <theme.BindEditor ast={ast} onChange={onChange} lhs={lhs} rhs={rhs} />;
+  return <theme.BindEditor ast={ast} onChange={onChange} lhs={lhs} rhs={rhs} rhsProps={rhsProps} lhsProps={lhsProps} />;
 }
 
 function ObjectUnaryEditor({
@@ -815,22 +835,20 @@ function ObjectUnaryEditor({
         lhs: newLhs
       } as AST);
     };
-    const key = (
-      <NodeEditor
-        ast={pair[0]}
-        onChange={newAst => changePair(newAst, 0)}
-        cols="12"
-      />
-    );
-    const value = (
-      <NodeEditor
-        ast={pair[1]}
-        onChange={newAst => changePair(newAst, 1)}
-        cols="12"
-      />
-    );
+    const changeKey = newAst => changePair(newAst, 0);
+    const changeValue = newAst => changePair(newAst, 1);
+    const keyProps = {
+      ast: pair[0],
+      onChange: changeKey
+    };
+    const valueProps = {
+      ast: pair[1],
+      onChange: changeValue
+    };
+    const key = <NodeEditor {...keyProps} cols="12" />;
+    const value = <NodeEditor {...valueProps} cols="12" />;
     const remove = () => removeIndex(idx);
-    return { key, value, remove }; // as const
+    return { key, value, remove, keyProps, valueProps }; // as const
   });
 
   return (
@@ -890,7 +908,7 @@ function ArrayUnaryEditor({
         expressions: newExpr
       });
     };
-    return { editor, remove };
+    return { editor, remove, ast: expr, onChange: changePair };
   });
 
   return (
@@ -906,19 +924,22 @@ function ArrayUnaryEditor({
 
 function ApplyEditor(props: NodeEditorProps<ApplyNode>): JSX.Element {
   const { theme } = Context.useContainer();
-
   const { baseLeft, chain } = flattenApply(props.ast, props.onChange);
-  console.log("props", baseLeft, chain);
   const lhs = <NodeEditor {...baseLeft} />;
-  const children = chain.map(c => (
-    <NodeEditor ast={c.ast} onChange={c.onChange} />
-  ));
+  const childNodes = chain.map(c => ({
+    editor: <NodeEditor ast={c.ast} onChange={c.onChange} />,
+    ast: c.ast,
+    onChange: c.onChange
+  }));
+  const children = childNodes.map(c => c.editor);
   return (
     <theme.ApplyEditor
       ast={props.ast}
       onChange={props.onChange}
       lhs={lhs}
+      lhsProps={baseLeft}
       children={children}
+      childNodes={childNodes}
     />
   );
 }
@@ -979,7 +1000,7 @@ function FunctionEditor({
   onChange
 }: NodeEditorProps<FunctionNode>): JSX.Element {
   const { theme } = Context.useContainer();
-  const args: JSX.Element[] = ast.arguments.map((a, idx) => {
+  const argumentNodes = ast.arguments.map((a, idx) => {
     const changeArg = (newAst: AST) => {
       const newArgs: AST[] = [...ast.arguments];
       newArgs[idx] = newAst;
@@ -989,8 +1010,13 @@ function FunctionEditor({
         arguments: newArgs
       } as FunctionNode);
     };
-    return <NodeEditor ast={a} onChange={changeArg} />;
+    return {
+      editor: <NodeEditor ast={a} onChange={changeArg} />,
+      ast: a,
+      onChange: changeArg
+    };
   });
+  const args = argumentNodes.map(c => c.editor);
   const changeProcedure = (value: string) =>
     onChange({
       ...ast,
@@ -1004,6 +1030,7 @@ function FunctionEditor({
       ast={ast}
       onChange={onChange}
       args={args}
+      argumentNodes={argumentNodes}
       changeProcedure={changeProcedure}
     />
   );

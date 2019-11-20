@@ -63,11 +63,22 @@ export type CombinerEditorProps = NodeEditorProps<BinaryNode> & {
   addNew: Callback;
   removeLast: Callback;
   combinerOperators: { [key: string]: string };
+  // @deprecated. use ChildNodes
   children: JSX.Element[];
+  childNodes: {
+    editor: JSX.Element;
+    ast: NodeEditorProps<AST>["ast"];
+    onChange: NodeEditorProps<AST>["onChange"];
+  }[];
 };
 
 export type BlockEditorProps = NodeEditorProps<BlockNode> & {
   children: Children;
+  childNodes: {
+    editor: JSX.Element;
+    ast: NodeEditorProps<AST>["ast"];
+    onChange: NodeEditorProps<AST>["onChange"];
+  }[];
 };
 
 export type ObjectUnaryEditorProps = NodeEditorProps<ObjectUnaryNode> & {
@@ -77,6 +88,8 @@ export type ObjectUnaryEditorProps = NodeEditorProps<ObjectUnaryNode> & {
     key: JSX.Element;
     value: JSX.Element;
     remove: Callback;
+    keyProps: NodeEditorProps<AST>;
+    valueProps: NodeEditorProps<AST>;
   }[];
 };
 
@@ -88,6 +101,8 @@ export type ArrayUnaryEditorProps = NodeEditorProps<ArrayUnaryNode> & {
   children: {
     editor: JSX.Element;
     remove: Callback;
+    ast: NodeEditorProps<AST>["ast"];
+    onChange: NodeEditorProps<AST>["onChange"];
   }[];
   addNew: Callback;
   removeLast: Callback;
@@ -123,26 +138,43 @@ export type ConditionEditorProps = NodeEditorProps<ConditionNode> & {
     Then: JSX.Element;
     Condition: JSX.Element;
     remove: Callback;
+    ast: NodeEditorProps<ConditionNode>["ast"];
+    onChange: NodeEditorProps<ConditionNode>["onChange"];
   }[];
 };
 
 export type ComparisonEditorProps = NodeEditorProps<BinaryNode> & {
   lhs: JSX.Element;
   rhs: JSX.Element;
+  lhsProps: NodeEditorProps<AST>;
+  rhsProps: NodeEditorProps<AST>;
   changeOperator: OnChange<BinaryNode["value"]>;
 };
 
 export type ApplyEditorProps = NodeEditorProps<ApplyNode> & {
   lhs: JSX.Element;
   children: Children;
+  lhsProps: NodeEditorProps<AST>;
+  childNodes: {
+    editor: JSX.Element;
+    ast: NodeEditorProps<AST>["ast"];
+    onChange: NodeEditorProps<AST>["onChange"];
+  }[];
 };
 
 export type FunctionEditorProps = NodeEditorProps<FunctionNode> & {
   args: Children;
+  argumentNodes: {
+    editor: JSX.Element;
+    ast: NodeEditorProps<AST>["ast"];
+    onChange: NodeEditorProps<AST>["onChange"];
+  }[];
   changeProcedure: OnChange<String>;
 };
 
 export type BindEditorProps = NodeEditorProps<BindNode> & {
   lhs: JSX.Element;
   rhs: JSX.Element;
+  lhsProps: NodeEditorProps<AST>;
+  rhsProps: NodeEditorProps<AST>;
 };
