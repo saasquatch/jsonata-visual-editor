@@ -746,13 +746,20 @@ function ConditionEditor({
     // Make the second-to-last condition's else = final else
     if (pairs.length <= 1) return; // Can't flatten a single-level condition
     const secondLast = pairs[pairs.length - 2].original;
-    secondLast.onChange({
-      ...secondLast.ast,
-      else: flattened.finalElse.ast
-    });
+    if(flattened.finalElse){
+      secondLast.onChange({
+        ...secondLast.ast,
+        else: flattened.finalElse.ast
+      });
+    } else {
+      secondLast.onChange({
+        ...secondLast.ast
+      });
+    } 
   };
   const addNew = () => {
     const last = pairs[pairs.length - 1].original;
+    if(flattened.finalElse){
     last.onChange({
       ...last.ast,
       else: {
@@ -760,10 +767,20 @@ function ConditionEditor({
         else: flattened.finalElse.ast
       }
     });
+    } else {
+      last.onChange({
+        ...last.ast,
+        else: {
+          ...defaultProvider.defaultCondition()
+        }
+      });
+    }
   };
 
   const removeAst = (ast: ConditionNode, onChange: OnChange) =>
-    onChange(ast.else);
+    ast.else ? 
+      onChange(ast.else)
+      : onChange(null)
 
   const children = flattened.pairs.map(pair => {
     const Then = <NodeEditor {...pair.then} cols="12" />;
