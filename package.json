@@ -12,7 +12,7 @@
     "dist"
   ],
   "dependencies": {
-    "jsonata-ui-core": "^1.7.2",
+    "jsonata-ui-core": "^1.7.4",
     "jsonata": "1.7.0",
     "react": "16.8.6",
     "unstated-next": "1.1.0"
