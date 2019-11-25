@@ -1,6 +1,6 @@
 {
   "name": "jsonata-visual-editor",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Visual editor for JSONata expressions. Themeable to your needs, default theme is Boostrap 4",
   "keywords": [
     "jsonata"
@@ -12,8 +12,8 @@
     "dist"
   ],
   "dependencies": {
+    "jsonata-ui-core": "^1.7.2",
     "jsonata": "1.7.0",
-    "jsonata-ui-core": "1.7.1",
     "react": "16.8.6",
     "unstated-next": "1.1.0"
   },

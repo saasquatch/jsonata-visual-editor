@@ -638,7 +638,7 @@ type Flattened = {
       onChange: OnChange;
     };
   }[];
-  finalElse: FlattenerProps;
+  finalElse?: FlattenerProps;
 };
 
 function flattenConditions({ ast, onChange }: FlattenerProps): Flattened {
@@ -661,6 +661,27 @@ function flattenConditions({ ast, onChange }: FlattenerProps): Flattened {
         })
     };
 
+
+    if(!ast.else){
+      return {
+          pairs: [
+          {
+            condition: {
+              ast: ast.condition,
+              onChange: handlers.condition
+            },
+            then: {
+              ast: ast.then,
+              onChange: handlers.then
+            },
+            original: {
+              ast,
+              onChange
+            }
+          }
+        ],
+      }
+    }
     const nested = flattenConditions({
       ast: ast.else,
       onChange: handlers.else
@@ -757,19 +778,28 @@ function ConditionEditor({
     };
   });
 
-  const elseEditor = <NodeEditor {...flattened.finalElse} cols="6" />;
-
-  return (
-    <theme.ConditionEditor
+  if(!flattened.finalElse){
+    return (
+      <theme.ConditionEditor
       ast={ast}
       onChange={onChange}
       children={children}
-      elseEditor={elseEditor}
       addNew={addNew}
       removeLast={removeLast}
-    />
-  );
-}
+      />);
+  } else {
+    const elseEditor = <NodeEditor {...flattened.finalElse} cols="6" />;
+    return (
+      <theme.ConditionEditor
+        ast={ast}
+        onChange={onChange}
+        children={children}
+        elseEditor={elseEditor}
+        addNew={addNew}
+        removeLast={removeLast}
+      />);
+    }
+  }
 
 function BindEditor({ ast, onChange }: NodeEditorProps<BindNode>): JSX.Element {
   const { theme } = Context.useContainer();

@@ -133,7 +133,7 @@ export type RootNodeEditorProps = NodeEditorProps<AST> & {
 export type ConditionEditorProps = NodeEditorProps<ConditionNode> & {
   addNew: Callback;
   removeLast: Callback;
-  elseEditor: JSX.Element;
+  elseEditor?: JSX.Element;
   children: {
     Then: JSX.Element;
     Condition: JSX.Element;
