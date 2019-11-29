@@ -2,6 +2,8 @@
 
 A visual expression builder for [jsonata](http://jsonata.org/);
 
+Demo: https://codesandbox.io/s/jsonata-visual-editor-5r2xt
+
 Uses cases:
 
  - Conditionals `a < 10 ? "Tier 1" : a < 20 ? "Tier 2" : "Tier 3"`
