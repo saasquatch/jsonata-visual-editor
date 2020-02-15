@@ -2,7 +2,7 @@
 
 A visual expression builder for [jsonata](http://jsonata.org/);
 
-Demo: https://codesandbox.io/s/jsonata-visual-editor-5r2xt
+Demo: https://codesandbox.io/s/jsonata-visual-editor-es4p2
 
 Uses cases:
 
