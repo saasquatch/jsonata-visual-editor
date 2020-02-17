@@ -54,7 +54,19 @@ export interface NodeEditorProps<NodeType extends AST> {
   /**
    * Number of columns. The default theme uses a 12-column design
    */
-  cols?: string;
+  cols?:
+    | "1"
+    | "2"
+    | "3"
+    | "4"
+    | "5"
+    | "6"
+    | "7"
+    | "8"
+    | "9"
+    | "10"
+    | "11"
+    | "12";
   /**
    * An optional editor. Allows parents to create restrictions on their direct descendants
    *
@@ -77,7 +89,6 @@ export type Container = {
  * Props for the base editor.
  */
 export interface EditorProps {
-
   /**
    * The current expression value for the editor
    */
@@ -92,13 +103,13 @@ export interface EditorProps {
   theme: Theme;
   /**
    * A JSON Schema for path suggestions and validation.
-   * 
+   *
    * `schemaProvider` will override the default provider from `schema`
    */
   schema?: any;
   /**
    * An optional shema provider. Used for path completion
-   * 
+   *
    * Will override the default schema provider via (schema)
    */
   schemaProvider?: SchemaProvider;

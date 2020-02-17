@@ -1,4 +1,4 @@
-import React, { FormEvent, ElementType } from "react";
+import React from "react";
 import {
   AntDesignOutline,
   DashboardOutline,
@@ -7,10 +7,11 @@ import {
   TableOutline,
   CloseCircleOutline,
   CheckSquareOutline,
-  DeleteOutline
+  DeleteOutline,
+  PlusOutline
 } from "@ant-design/icons";
 import AntdIcon from "@ant-design/icons-react";
-import { InputGroup, Form, Col, Table } from "react-bootstrap";
+import { InputGroup, Form, Col } from "react-bootstrap";
 import styled from "styled-components";
 
 import {
@@ -18,14 +19,16 @@ import {
   IconButton,
   TextField as TextFieldBase,
   Button,
-  FormGroup,
+  Table,
   TableRow,
   TableCell,
   TableHead,
   TableBody,
   FormControl,
   Select,
-  Grid
+  Grid,
+  Box,
+  Fab
 } from "@material-ui/core";
 
 import PathPicker from "./PathEditor";
@@ -61,9 +64,6 @@ type ButtonHelpProps = ButtonProps & {
   children: React.ReactNode;
 };
 
-const Inset = styled.div`
-  border-left: 10px solid #eee;
-`;
 const InlineError = styled.div`
   color: red;
 `;
@@ -77,7 +77,7 @@ const StyledIconButton = styled(IconButton)`
 const AsyncCreatableSelectStyle = {
   container: (provided, state) => ({
     ...provided,
-    width: 200,
+    width: "inherit",
     height: 56,
     margin: "0px"
   }),
@@ -94,7 +94,6 @@ const AsyncCreatableSelectStyle = {
   }),
   singleValue: (provided, state) => ({
     ...provided,
-    lineHeight: "1",
     padding: "18.5px 14px 19.5px 14px"
   }),
   valueContainer: (provided, state) => ({
@@ -112,18 +111,25 @@ AntdIcon.add(
   DashboardOutline,
   FontSizeOutline,
   NumberOutline,
-  CloseCircleOutline
+  CloseCircleOutline,
+  PlusOutline,
+  DeleteOutline
 );
 const IconMap = {
   number: NumberOutline,
   string: FontSizeOutline,
   path: TableOutline,
   value: CheckSquareOutline,
-  delete: DeleteOutline
+  delete: DeleteOutline,
+  add: PlusOutline
 };
 
-function Icon(props: { type: string }) {
-  return <AntdIcon type={IconMap[props.type]} style={{ fontSize: 16 }} />;
+function Icon(props: { type: string; color?: string }) {
+  const style = {
+    fontSize: 16,
+    color: props.color ? props.color : ""
+  };
+  return <AntdIcon type={IconMap[props.type]} style={style} />;
 }
 
 const DescriptionMap = {
@@ -133,7 +139,6 @@ const DescriptionMap = {
   value: " We'll compare this as a boolean. Click to change."
 };
 
-/************ MATERIAL */
 function TypeSwitch({
   ast,
   changeType
@@ -147,7 +152,6 @@ function TypeSwitch({
   );
 }
 
-/******************** MATERIAL ********************/
 function IDETextarea(props: IDETextareaProps) {
   return (
     <Grid item xs container justify="flex-start">
@@ -171,34 +175,37 @@ function IDETextarea(props: IDETextareaProps) {
 /**BOOT */
 function CombinerEditor(props: CombinerEditorProps) {
   return (
-    <Inset>
-      <FormGroup row>
-        <InputGroup as={Col} sm="2">
-          <TextField
-            select
-            variant="outlined"
+    <>
+      <Grid item xs={2}>
+        <FormControl variant="outlined">
+          <Select
+            native
             value={props.ast.value}
             onChange={(e: any) => props.onChange(e.target.value)}
+            inputProps={{
+              name: "combined",
+              id: "combined-native"
+            }}
           >
             {Object.keys(props.combinerOperators).map(k => (
               <option key={k} value={k}>
                 {props.combinerOperators[k]}
               </option>
             ))}
-          </TextField>
-        </InputGroup>
-        <Col sm="10">
-          {props.children.map(child => (
-            <Form.Row>{child}</Form.Row>
-          ))}
-          <AddRemoveGroup addNew={props.addNew} removeLast={props.removeLast} />
-        </Col>
-      </FormGroup>
-    </Inset>
+          </Select>
+        </FormControl>
+      </Grid>
+      <Grid item xs>
+        {props.children.map(child => (
+          <Grid item xs={12}>
+            {child}
+          </Grid>
+        ))}
+      </Grid>
+    </>
   );
 }
 
-/****MAT */
 type AddRemoveGroupProps = {
   addNew: Callback;
   removeLast: Callback;
@@ -210,14 +217,25 @@ function AddRemoveGroup({
   canDelete = true
 }: AddRemoveGroupProps) {
   return (
-    <>
-      <Button onClick={addNew} startIcon={<Icon type="delete" />}>
+    <Box display="flex" mt="15px" width="250px" justifyContent="space-between">
+      {/* <Button onClick={addNew} startIcon={<Icon type="add" />}>
         Add
-      </Button>
-      <Button onClick={removeLast} disabled={!canDelete}>
-        Remove
-      </Button>
-    </>
+      </Button> */}
+      <Fab onClick={addNew} variant="extended" size="medium" color="primary">
+        <Icon type="add" />
+        <span style={{ marginLeft: "10px" }}>Add</span>
+      </Fab>
+      <Fab
+        onClick={removeLast}
+        disabled={!canDelete}
+        variant="extended"
+        size="medium"
+        color="secondary"
+      >
+        <Icon type="delete" />
+        <span style={{ marginLeft: "10px" }}>Remove</span>
+      </Fab>
+    </Box>
   );
 }
 
@@ -251,27 +269,23 @@ function ConditionEditor({
                 <TableCell>{pair.Condition}</TableCell>
                 <TableCell>
                   <StyledIconButton onClick={pair.remove} disabled={!canDelete}>
-                    <Icon type="delete" />
+                    <Icon color="red" type="delete" />
                   </StyledIconButton>
                 </TableCell>
               </TableRow>
             );
           })}
           <TableRow>
-            <TableCell>
-              <AddRemoveGroup
-                addNew={addNew}
-                removeLast={removeLast}
-                canDelete={canDelete}
-              />
-            </TableCell>
-            <TableCell>
-              Default:
-              {elseEditor}
-            </TableCell>
+            <TableCell>{elseEditor}</TableCell>
+            <TableCell />
           </TableRow>
         </TableBody>
       </Table>
+      <AddRemoveGroup
+        addNew={addNew}
+        removeLast={removeLast}
+        canDelete={canDelete}
+      />
     </>
   );
 }
@@ -289,6 +303,7 @@ function ObjectUnaryEditor({
           {/* <TableRow> */}
           <TableCell>Key</TableCell>
           <TableCell>Value</TableCell>
+          <TableCell></TableCell>
           {/* </TableRow> */}
         </TableHead>
         <TableBody>
@@ -297,9 +312,9 @@ function ObjectUnaryEditor({
               <TableRow>
                 <TableCell>{c.key}</TableCell>
                 <TableCell>{c.value}</TableCell>
-                <TableCell>
+                <TableCell padding="checkbox">
                   <StyledIconButton onClick={c.remove} disabled={!canDelete}>
-                    <Icon type="delete" />
+                    <Icon color="red" type="delete" />
                   </StyledIconButton>
                 </TableCell>
               </TableRow>
@@ -348,27 +363,25 @@ function ArrayUnaryEditor({
   const canDelete = children.length > 1;
   return (
     <>
-      <Table striped bordered hover>
-        <thead>
-          <tr>
-            <th>Value</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
+      <Table>
+        <TableHead>
+          <TableCell>Value</TableCell>
+          <TableCell />
+        </TableHead>
+        <TableBody>
           {children.map(c => {
             return (
-              <tr>
-                <td>{c.editor}</td>
-                <td>
+              <TableRow>
+                <TableCell>{c.editor}</TableCell>
+                <TableCell>
                   <StyledIconButton onClick={c.remove} disabled={!canDelete}>
-                    <Icon type="delete" />
+                    <Icon color="red" type="delete" />
                   </StyledIconButton>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             );
           })}
-        </tbody>
+        </TableBody>
       </Table>
       <AddRemoveGroup addNew={addNew} removeLast={removeLast} />
     </>
@@ -379,7 +392,7 @@ function LeafValueEditor({
   ast,
   onChange,
   validator,
-  cols = "4",
+  cols = "5",
   onChangeText,
   text,
   changeType
@@ -387,15 +400,18 @@ function LeafValueEditor({
   return (
     <Grid
       item
-      xs={4}
+      //@ts-ignore;
+      xs={parseInt(cols)}
       container
       spacing={1}
-      justify="center"
+      justify="flex-start"
       alignItems="center"
       wrap="nowrap"
     >
       <Grid item>
         <TextField
+          // error={error}
+          // helperText={error.message}
           label="Enter a value"
           value={text}
           variant="outlined"
@@ -405,9 +421,6 @@ function LeafValueEditor({
       <Grid item>
         <TypeSwitch ast={ast} onChange={onChange} changeType={changeType} />
       </Grid>
-      <Form.Control.Feedback type="invalid">
-        {/* {error.message} */}
-      </Form.Control.Feedback>
     </Grid>
   );
 }
@@ -416,27 +429,30 @@ function PathEditor({
   ast,
   onChange,
   changeType,
-  cols = "4",
+  cols = "5",
   schemaProvider
 }: PathEditorProps) {
   const paths = schemaProvider && schemaProvider.getPaths;
   return (
     <Grid
       item
-      xs={4}
+      //@ts-ignore;
+      xs={parseInt(cols)}
       container
       spacing={1}
-      justify="center"
+      justify="flex-start"
       alignItems="center"
       wrap="nowrap"
     >
       <Grid item>
-        <PathPicker
-          value={ast}
-          onChange={option => onChange(option.value as AST)}
-          paths={paths}
-          styles={AsyncCreatableSelectStyle}
-        />
+        <FormControl error>
+          <PathPicker
+            value={ast}
+            onChange={option => onChange(option.value as AST)}
+            paths={paths}
+            styles={AsyncCreatableSelectStyle}
+          />
+        </FormControl>
       </Grid>
       <Grid item>
         <TypeSwitch ast={ast} onChange={onChange} changeType={changeType} />
@@ -483,7 +499,7 @@ function Base({ toggleMode, toggleBlock, mode, editor }: BaseEditorProps) {
           Switch to {mode === Modes.NodeMode ? "Advanced" : "Basic"}
         </ButtonHelp>
       </Grid>
-      <Grid item xs={12} container>
+      <Grid item xs={12} container justify="space-between">
         {editor}
       </Grid>
     </Grid>
@@ -500,9 +516,16 @@ function ComparisonEditor({
   ast
 }: ComparisonEditorProps) {
   return (
-    <Grid item xs={12} container justify="space-between" alignItems="center">
+    <Grid
+      item
+      xs={12}
+      container
+      spacing={1}
+      justify="space-between"
+      alignItems="center"
+    >
       {lhs}
-      <Grid item xs={3}>
+      <Grid item xs={2}>
         <FormControl variant="outlined">
           <Select
             native
@@ -546,10 +569,12 @@ function ApplyEditor({ lhs, children, ast }: ApplyEditorProps) {
   if (children.length === 1) {
     // Single apply, similar to binarynode
     return (
-      <Grid item xs={8} container justify="space-evenly" alignItems="center">
-        {lhs}
-        {children[0]}
-      </Grid>
+      <Box width="750px">
+        <Grid container spacing={1} justify="center">
+          {lhs}
+          {children[0]}
+        </Grid>
+      </Box>
     );
   }
   return (
@@ -575,7 +600,7 @@ function FunctionEditor({
   changeProcedure
 }: FunctionEditorProps): JSX.Element {
   const picker = (
-    <Grid item xs={4} container justify="center">
+    <Grid item xs={2} container justify="flex-start">
       <TextField
         select
         label="Function"
@@ -601,23 +626,26 @@ function FunctionEditor({
 
   return (
     <>
-      <FormGroup row>
-        {picker}
-        {args}
-      </FormGroup>
+      {picker}
+      {args}
     </>
   );
 }
 
 function BindEditor({ lhs, rhs }: BindEditorProps) {
   return (
-    <>
-      <FormGroup row>
-        {lhs}
-        <Col sm="2">set value to:</Col>
-        {rhs}
-      </FormGroup>
-    </>
+    <Grid
+      item
+      xs={12}
+      container
+      spacing={2}
+      justify="flex-end"
+      alignItems="center"
+    >
+      {lhs}
+      <Grid item>set value to:</Grid>
+      {rhs}
+    </Grid>
   );
 }
 
