@@ -51,7 +51,7 @@ const CustomOption = (props: CustomOptionProps) => {
     );
   } else {
     // For new items before they are created.
-    const newOption:any = option;
+    const newOption: any = option;
     const validPath = isValidNewOption(newOption.value);
     return (
       <defaultComponents.Option {...props}>
@@ -84,6 +84,7 @@ type PathEditorProps = {
   onChange: (ast: Option) => void;
   value: AST;
   paths: (ast: AST) => PathSuggestion[];
+  styles?: any;
 };
 
 const components = {
@@ -151,6 +152,7 @@ export default function PathEditor(props: PathEditorProps) {
       value={option}
       onChange={props.onChange}
       components={components}
+      styles={props.styles}
     />
   );
 }

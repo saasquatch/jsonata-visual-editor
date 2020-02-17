@@ -7,6 +7,7 @@ import { serializer, ConditionNode } from "jsonata-ui-core";
 
 import { Editor } from "./AstEditor";
 import { DefaultTheme } from "./theme/DefaultTheme";
+import { MaterialUITheme } from "./theme/MaterialUITheme";
 import { AST } from "./Types";
 import { makeSchemaProvider } from "./schema/SchemaProvider";
 
@@ -99,6 +100,8 @@ function NewTierDefault(): ConditionNode {
 
 function App() {
   const [text, setText] = useState(defaultText);
+  // User facing theme switcher
+  const [theme, setTheme] = useState(MaterialUITheme);
 
   let serializedVersions = [];
   let keys = [];
@@ -129,7 +132,7 @@ function App() {
   ];
 
   return (
-    <div>
+    <div style={{ width: "1100px", margin: "50px auto" }}>
       <h1>Query Builder</h1>
       <p>Filter for which Purchase events will trigger this program</p>
       {/* <div>
@@ -141,11 +144,12 @@ function App() {
         />
         <button onClick={toAst}>-></button>
       </div> */}
+      {/* <ThemeSwitch currentTheme={theme} /> */}
       <Editor
         text={text}
         onChange={setText}
         theme={{
-          ...DefaultTheme,
+          ...theme,
           VariableEditor: CustomVariableEditor
           // ConditionEditor: Flowchart
         }}
@@ -166,10 +170,16 @@ function App() {
         : "✗ serializer bug"}
 
       <table>
-        <tr><th>Examples</th></tr>
-      {options.map(o => (
-        <tr><td><Button onClick={() => setText(o)}>{o}</Button></td></tr>
-      ))}
+        <tr>
+          <th>Examples</th>
+        </tr>
+        {options.map(o => (
+          <tr>
+            <td>
+              <Button onClick={() => setText(o)}>{o}</Button>
+            </td>
+          </tr>
+        ))}
       </table>
       <div style={{ marginTop: "500px" }}>
         <pre>

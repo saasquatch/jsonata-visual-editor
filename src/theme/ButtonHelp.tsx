@@ -1,4 +1,4 @@
-import React, {useMemo} from "react";
+import React from "react";
 import { OverlayTrigger, Tooltip, Button } from "react-bootstrap";
 
 type ButtonProps = React.ComponentProps<typeof Button>;
@@ -7,6 +7,7 @@ type ButtonHelpProps = ButtonProps & {
   children: React.ReactNode;
 };
 export default function ButtonHelp(props: ButtonHelpProps) {
+  // Button prop allows for future additional theming
   const { disabledHelp, ...btnProps } = props;
 
   if (props.disabled) {
@@ -20,7 +21,9 @@ export default function ButtonHelp(props: ButtonHelpProps) {
       <OverlayTrigger
         trigger="hover"
         placement="top"
-        overlay={<Tooltip id={"tooltip" + Math.random()}>{disabledHelp}</Tooltip>}
+        overlay={
+          <Tooltip id={"tooltip" + Math.random()}>{disabledHelp}</Tooltip>
+        }
       >
         <span>
           <Button {...subProps} className="disabled" />
