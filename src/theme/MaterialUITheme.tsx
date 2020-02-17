@@ -11,7 +11,6 @@ import {
   PlusOutline
 } from "@ant-design/icons";
 import AntdIcon from "@ant-design/icons-react";
-import { InputGroup, Form, Col } from "react-bootstrap";
 import styled from "styled-components";
 
 import {
@@ -445,7 +444,8 @@ function PathEditor({
       wrap="nowrap"
     >
       <Grid item>
-        <FormControl error>
+        <FormControl>
+          {/* error display */}
           <PathPicker
             value={ast}
             onChange={option => onChange(option.value as AST)}
@@ -457,9 +457,6 @@ function PathEditor({
       <Grid item>
         <TypeSwitch ast={ast} onChange={onChange} changeType={changeType} />
       </Grid>
-      <Form.Control.Feedback type="invalid">
-        {/* {parsing.error}  */}
-      </Form.Control.Feedback>
     </Grid>
   );
 }
