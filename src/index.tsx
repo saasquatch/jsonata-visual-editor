@@ -101,7 +101,7 @@ function NewTierDefault(): ConditionNode {
 function App() {
   const [text, setText] = useState(defaultText);
   // User facing theme switcher
-  const [theme, setTheme] = useState(MaterialUITheme);
+  const [theme, setTheme] = useState(DefaultTheme);
 
   let serializedVersions = [];
   let keys = [];
