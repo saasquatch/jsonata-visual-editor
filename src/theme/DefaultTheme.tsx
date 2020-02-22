@@ -45,11 +45,7 @@ import {
   NodeEditorProps,
   SchemaProvider
 } from "../Types";
-import {
-  baseOperators,
-  numberOperators,
-  arrayOperators,
-} from "../Consts";
+import { baseOperators, numberOperators, arrayOperators } from "../Consts";
 import {
   IDETextareaProps,
   CombinerEditorProps,
@@ -139,7 +135,9 @@ function IDETextarea(props: IDETextareaProps) {
         as="textarea"
         rows="3"
         value={props.text}
-        onChange={(e:any) => /** @ts-ignore */ props.textChange(e.target.value)}
+        onChange={(e: any) =>
+          /** @ts-ignore */ props.textChange(e.target.value)
+        }
       />
       <br />
       {props.parsing.inProgress ? (
@@ -159,7 +157,7 @@ function CombinerEditor(props: CombinerEditorProps) {
           <Form.Control
             as="select"
             value={props.ast.value}
-            onChange={(e:any) => props.onChange(e.target.value)}
+            onChange={(e: any) => props.onChange(e.target.value)}
           >
             {Object.keys(props.combinerOperators).map(k => (
               <option key={k} value={k}>
@@ -411,7 +409,7 @@ function Base({ toggleMode, toggleBlock, mode, editor }: BaseEditorProps) {
       <div style={{ float: "right" }}>
         <ButtonHelp
           onClick={toggleMode}
-          disabled={toggleBlock?true:false}
+          disabled={toggleBlock ? true : false}
           variant="secondary"
           size="sm"
           disabledHelp={toggleBlock}
@@ -441,7 +439,7 @@ function ComparisonEditor({
           <Form.Control
             as="select"
             value={ast.value}
-            onChange={(e:any) => changeOperator(e.target.value)}
+            onChange={(e: any) => changeOperator(e.target.value)}
           >
             <optgroup label="Common Operators">
               {Object.keys(baseOperators).map(k => (
@@ -515,7 +513,7 @@ function FunctionEditor({
       <Form.Control
         as="select"
         value={ast.procedure.value}
-        onChange={(e:any) => changeProcedure(e.target.value)}
+        onChange={(e: any) => changeProcedure(e.target.value)}
       >
         <option value="contains">$contains</option>
       </Form.Control>
@@ -578,5 +576,8 @@ export const DefaultTheme = {
   BindEditor,
   VariableEditor,
   LeafValueEditor,
-  PathEditor
+  PathEditor,
+
+  /* Button */
+  Button
 };

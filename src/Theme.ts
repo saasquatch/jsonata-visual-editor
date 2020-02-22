@@ -51,6 +51,9 @@ export type Theme = {
   VariableEditor: Comp<VariableEditorProps>;
   LeafValueEditor: Comp<LeafValueEditorProps>;
   PathEditor: Comp<PathEditorProps>;
+
+  /* Button Component */
+  Button: Comp<{ onClick: () => void }>;
 };
 
 export interface IDETextareaProps {

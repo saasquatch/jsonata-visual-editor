@@ -12,7 +12,7 @@ import { AST } from "./Types";
 import { makeSchemaProvider } from "./schema/SchemaProvider";
 
 import PurchaseEvent from "./example/PurchaseEvent.schema";
-import Flowchart from "./example/Flowchart";
+import { ThemeSwitch } from "./theme/ThemeHandler";
 
 // @ts-ignore
 const schemaProvider = makeSchemaProvider(PurchaseEvent);
@@ -101,7 +101,7 @@ function NewTierDefault(): ConditionNode {
 function App() {
   const [text, setText] = useState(defaultText);
   // User facing theme switcher
-  const [theme, setTheme] = useState(DefaultTheme);
+  const [theme, setTheme] = useState(MaterialUITheme);
 
   let serializedVersions = [];
   let keys = [];
@@ -144,7 +144,7 @@ function App() {
         />
         <button onClick={toAst}>-></button>
       </div> */}
-      {/* <ThemeSwitch currentTheme={theme} /> */}
+      <ThemeSwitch setCurrentTheme={setTheme} />
       <Editor
         text={text}
         onChange={setText}
@@ -176,7 +176,7 @@ function App() {
         {options.map(o => (
           <tr>
             <td>
-              <Button onClick={() => setText(o)}>{o}</Button>
+              <theme.Button onClick={() => setText(o)}>{o}</theme.Button>
             </td>
           </tr>
         ))}

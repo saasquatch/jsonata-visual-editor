@@ -17,7 +17,7 @@ import {
   Tooltip,
   IconButton,
   TextField as TextFieldBase,
-  Button,
+  Button as MuiButton,
   Table,
   TableRow,
   TableCell,
@@ -57,7 +57,7 @@ type Callback = () => void;
 type OnChange<T> = (val: T) => void;
 type Children = JSX.Element[];
 
-type ButtonProps = React.ComponentProps<typeof Button>;
+type ButtonProps = React.ComponentProps<typeof MuiButton>;
 type ButtonHelpProps = ButtonProps & {
   disabledHelp: string;
   children: React.ReactNode;
@@ -98,6 +98,10 @@ const AsyncCreatableSelectStyle = {
   valueContainer: (provided, state) => ({
     ...provided,
     padding: "0px"
+  }),
+  menuList: (provided, state) => ({
+    ...provided,
+    zIndex: 9999
   })
 };
 
@@ -468,12 +472,12 @@ function ButtonHelp(props: ButtonHelpProps) {
     const { onClick, disabled, ...subProps } = btnProps;
     return (
       <Tooltip placement="top" title={disabledHelp}>
-        <Button {...subProps} disabled />
+        <MuiButton {...subProps} disabled />
       </Tooltip>
     );
   }
 
-  return <Button {...btnProps} />;
+  return <MuiButton {...btnProps} />;
 }
 
 function Base({ toggleMode, toggleBlock, mode, editor }: BaseEditorProps) {
@@ -646,6 +650,14 @@ function BindEditor({ lhs, rhs }: BindEditorProps) {
   );
 }
 
+function Button({ onClick, children }) {
+  return (
+    <MuiButton onClick={onClick} variant="contained" color="primary">
+      {children}
+    </MuiButton>
+  );
+}
+
 export const MaterialUITheme = {
   /*
     Base editors
@@ -672,5 +684,8 @@ export const MaterialUITheme = {
   BindEditor,
   VariableEditor,
   LeafValueEditor,
-  PathEditor
+  PathEditor,
+
+  /* Button */
+  Button
 };
