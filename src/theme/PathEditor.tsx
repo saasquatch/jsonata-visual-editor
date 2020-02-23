@@ -153,6 +153,7 @@ export default function PathEditor(props: PathEditorProps) {
       onChange={props.onChange}
       components={components}
       styles={props.styles}
+      menuPortalTarget={document.querySelector("body")}
     />
   );
 }

@@ -99,9 +99,9 @@ const AsyncCreatableSelectStyle = {
     ...provided,
     padding: "0px"
   }),
-  menuList: (provided, state) => ({
+  menu: (provided, state) => ({
     ...provided,
-    zIndex: 9999
+    zIndex: 10
   })
 };
 
