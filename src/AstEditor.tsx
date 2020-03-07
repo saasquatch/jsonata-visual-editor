@@ -32,6 +32,7 @@ import * as _consts from "./Consts";
 import { StandardDefaultProvider } from "./util/DefaultProvider";
 
 import * as Types from "./Types";
+import { Theme } from "./Theme";
 import _paths from "./schema/PathSuggester";
 import * as SchemaProvider from "./schema/SchemaProvider";
 // re-export types for theming purposes
@@ -1104,7 +1105,7 @@ function MathContainerEditor(props: NodeEditorProps<BinaryNode>): JSX.Element {
   const [parsing, setParsing] = useState<ParsingState>({
     inProgress: false,
   });
-  const nodes = flattenMathNodes(props);
+  const nodes = flattenMathNodes(props, theme);
   const changeType = () => { props.onChange(nextAst(props.ast, defaultProvider)) };
 
   function onChangeText(newText: string) {
@@ -1143,13 +1144,11 @@ function MathContainerEditor(props: NodeEditorProps<BinaryNode>): JSX.Element {
   );
 }
 
-function flattenMathNodes({ ast, ...rest }: NodeEditorProps<AST>, collectedNodes: JSX.Element[] = []): JSX.Element[] {
-  const { theme } = Context.useContainer();
-
+function flattenMathNodes({ ast, ...rest }: NodeEditorProps<AST>, theme: Theme, collectedNodes: JSX.Element[] = []): JSX.Element[] {
   if (ast.type == "binary") {
-    flattenMathNodes({ ast: ast.lhs, ...rest }, collectedNodes);
+    flattenMathNodes({ ast: ast.lhs, ...rest }, theme, collectedNodes);
     collectedNodes.push(<theme.MathBinaryOperatorEditor ast={ast} {...rest}/>);
-    flattenMathNodes({ ast: ast.rhs, ...rest }, collectedNodes);
+    flattenMathNodes({ ast: ast.rhs, ...rest }, theme, collectedNodes);
   } else if (ast.type === "path") {
     collectedNodes.push(<theme.MathPathEditor ast={ast} serializedPath={serializer(ast)} {...rest} />);
   } else if (
@@ -1161,7 +1160,7 @@ function flattenMathNodes({ ast, ...rest }: NodeEditorProps<AST>, collectedNodes
   } else if (ast.type === "block") {
     const groupedNodes = []
     for (let expression of ast.expressions) {
-      flattenMathNodes({ ast: expression, ...rest}, groupedNodes);
+      flattenMathNodes({ ast: expression, ...rest}, theme, groupedNodes);
     }
     collectedNodes.push(
       <theme.MathBlockEditor ast={ast} {...rest}>
