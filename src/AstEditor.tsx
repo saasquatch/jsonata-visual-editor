@@ -220,7 +220,7 @@ function useUpDownEffect<T>(
       setUpward(value);
       effect();
     }
-  }, [value]);
+  }, [value, upwardValue, effect]);
   const upWardChange = (up: T) => {
     setUpward(up);
     onChange(up);
