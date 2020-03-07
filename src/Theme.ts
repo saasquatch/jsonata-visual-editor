@@ -51,6 +51,15 @@ export type Theme = {
   VariableEditor: Comp<VariableEditorProps>;
   LeafValueEditor: Comp<LeafValueEditorProps>;
   PathEditor: Comp<PathEditorProps>;
+
+  /*
+      Math editors
+    */
+  MathContainerEditor: Comp<MathContainerEditorProps>;
+  MathBinaryOperatorEditor: Comp<MathBinaryOperatorEditorProps>;
+  MathPathEditor: Comp<MathPathEditorProps>;
+  MathLiteralEditor: Comp<MathLiteralEditorProps>;
+  MathBlockEditor: Comp<MathBlockEditorProps>;
 };
 
 export interface IDETextareaProps {
@@ -177,4 +186,24 @@ export type BindEditorProps = NodeEditorProps<BindNode> & {
   rhs: JSX.Element;
   lhsProps: NodeEditorProps<AST>;
   rhsProps: NodeEditorProps<AST>;
+};
+
+export type MathContainerEditorProps = NodeEditorProps<BinaryNode> & {
+  children: Children;
+  text: string;
+  onChangeText: OnChange<string>;
+  parsing: ParsingState;
+  changeType: Callback;
+};
+
+export type MathBinaryOperatorEditorProps = NodeEditorProps<BinaryNode> & {};
+
+export type MathPathEditorProps = NodeEditorProps<PathNode> & {
+  serializedPath: string;
+};
+
+export type MathLiteralEditorProps = NodeEditorProps<LiteralNode> & {};
+
+export type MathBlockEditorProps = NodeEditorProps<BlockNode> & {
+  children: Children;
 };

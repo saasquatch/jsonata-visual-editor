@@ -22,11 +22,13 @@ const set = `[Q = 0, Q = 1, Q = 3]`;
 const obj = `{"one":Q = 0, "two": Q = 1,  "three": Q = 3}`;
 const cond = `Q = 0 ? "Tier 1" : Q =1 ? "Tier 2" : "Tier 3"`;
 const singleCond = `($Q := products[product_id="seat"].quantity; $Q = 0 ? $tier1 : $Q = 1 ? $tier2 : $defaultTier)`;
+const fizzbuzz = `Q % 3 = 0 ? "Fizz" : Q % 5 = 0 ? "Buzz" : Q`;
+const math = `Q + 3 * 2 / (16 - 4)`;
 
 const defaultText: string = apply;
 const introspection = jsonata(`**[type="name"].value`);
 
-const options = [apply, set, obj, cond, singleCond];
+const options = [apply, set, obj, cond, singleCond, fizzbuzz, math];
 
 // TODO : Make this recursive, smarter
 const NodeWhitelist = jsonata(`

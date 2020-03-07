@@ -15,7 +15,8 @@ import {
   ArrayUnaryNode,
   ApplyNode,
   FunctionNode,
-  BindNode
+  BindNode,
+  NameNode
 } from "jsonata-ui-core";
 import {
   ParsingState,
@@ -62,6 +63,7 @@ export const Context = createContainer(useEditorContext);
 
 export const isNumberNode = (n: AST) => n.type === "number";
 export const isPathNode = (n: AST) => n.type === "path";
+export const isMath = (n: AST) => n.type === "binary" && Object.keys(Consts.mathOperators).includes(n.value);
 
 type State =
   | {
@@ -310,8 +312,9 @@ function BinaryEditor(props: NodeEditorProps<BinaryNode>) {
   if (Object.keys(Consts.comparionsOperators).includes(props.ast.value)) {
     return <ComparisonEditor {...props} />;
   }
-  throw new Error("Unimplemented binary node");
-  // TODO: Implement MathNode
+  if (Object.keys(Consts.mathOperators).includes(props.ast.value)) {
+    return <MathContainerEditor {...props} />;
+  }
 }
 
 function ComparisonEditor(props: NodeEditorProps<BinaryNode>): JSX.Element {
@@ -497,6 +500,18 @@ function PathEditor({
 }
 
 function nextAst(ast: AST, defaults: DefaultProvider): AST {
+  // If a math expression has been typed as a string, we can upconvert it
+  if (ast.type === "string") {
+    try {
+      const testAst = jsonata(ast.value as string).ast() as AST;
+      if (isMath(testAst)) {
+        return testAst;
+      }
+    } catch (e) {
+
+    }
+  }
+
   if (ast.type !== "path") {
     // @ts-ignore
     if (ast.value && !isNaN(ast.value)) {
@@ -1082,3 +1097,81 @@ function FunctionEditor({
     />
   );
 }
+
+function MathContainerEditor(props: NodeEditorProps<BinaryNode>): JSX.Element {
+  const { theme, defaultProvider } = Context.useContainer();
+  const [text, setText] = useState(serializer(props.ast));
+  const [parsing, setParsing] = useState<ParsingState>({
+    inProgress: false,
+  });
+  const nodes = flattenMathNodes(props);
+  const changeType = () => { props.onChange(nextAst(props.ast, defaultProvider)) };
+
+  function onChangeText(newText: string) {
+    let error: string | undefined = undefined;
+    setParsing({
+      inProgress: true,
+      error
+    });
+    try {
+      const newAst = jsonata(newText).ast() as AST;
+      if (!isMath(newAst)) {
+        throw new Error("that's not a math expressions");
+      }
+      props.onChange(newAst);
+    } catch (e) {
+      error = "Parsing Error: " + e.message;
+    } finally {
+     setParsing({
+       inProgress: false,
+       error
+     });
+     setText(newText);
+    }
+  }
+
+  return (
+    <theme.MathContainerEditor 
+      text={text} 
+      onChangeText={onChangeText} 
+      parsing={parsing} 
+      changeType={changeType}
+      {...props}
+    >
+      {nodes}
+    </theme.MathContainerEditor>
+  );
+}
+
+function flattenMathNodes({ ast, ...rest }: NodeEditorProps<AST>, collectedNodes: JSX.Element[] = []): JSX.Element[] {
+  const { theme } = Context.useContainer();
+
+  if (ast.type == "binary") {
+    flattenMathNodes({ ast: ast.lhs, ...rest }, collectedNodes);
+    collectedNodes.push(<theme.MathBinaryOperatorEditor ast={ast} {...rest}/>);
+    flattenMathNodes({ ast: ast.rhs, ...rest }, collectedNodes);
+  } else if (ast.type === "path") {
+    collectedNodes.push(<theme.MathPathEditor ast={ast} serializedPath={serializer(ast)} {...rest} />);
+  } else if (
+    ast.type === "number" ||
+    ast.type === "value" ||
+    ast.type === "string"
+  ) {
+    collectedNodes.push(<theme.MathLiteralEditor ast={ast} {...rest}/>);
+  } else if (ast.type === "block") {
+    const groupedNodes = []
+    for (let expression of ast.expressions) {
+      flattenMathNodes({ ast: expression, ...rest}, groupedNodes);
+    }
+    collectedNodes.push(
+      <theme.MathBlockEditor ast={ast} {...rest}>
+        {groupedNodes}
+      </theme.MathBlockEditor>
+    );
+  } else {
+    throw new Error("Unsupported math node type: " + ast.type);
+  }
+
+  return collectedNodes;
+}
+
