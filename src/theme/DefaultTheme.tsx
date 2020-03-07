@@ -209,9 +209,9 @@ function ConditionEditor({
           </tr>
         </thead>
         <tbody>
-          {children.map(pair => {
+          {children.map((pair, i) => {
             return (
-              <tr>
+              <tr key={i}>
                 <td>{pair.Then}</td>
                 <td>{pair.Condition}</td>
                 <td>
@@ -258,9 +258,9 @@ function ObjectUnaryEditor({
           </tr>
         </thead>
         <tbody>
-          {children.map(c => {
+          {children.map((c, i) => {
             return (
-              <tr>
+              <tr key={i}>
                 <td>{c.key}</td>
                 <td>{c.value}</td>
                 <td>
@@ -321,9 +321,9 @@ function ArrayUnaryEditor({
           </tr>
         </thead>
         <tbody>
-          {children.map(c => {
+          {children.map((c, i) => {
             return (
-              <tr>
+              <tr key={i}>
                 <td>{c.editor}</td>
                 <td>
                   <Button onClick={c.remove} disabled={!canDelete}>

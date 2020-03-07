@@ -607,7 +607,7 @@ function BlockEditor({
       onChange(newBlock);
     };
     return {
-      editor: <NodeEditor ast={exp} onChange={changeExpr} />,
+      editor: <NodeEditor key={idx} ast={exp} onChange={changeExpr} />,
       ast: exp,
       onChange: changeExpr
     };
