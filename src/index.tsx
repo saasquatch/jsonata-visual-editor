@@ -11,7 +11,6 @@ import { AST } from "./Types";
 import { makeSchemaProvider } from "./schema/SchemaProvider";
 
 import PurchaseEvent from "./example/PurchaseEvent.schema";
-import Flowchart from "./example/Flowchart";
 
 // @ts-ignore
 const schemaProvider = makeSchemaProvider(PurchaseEvent);

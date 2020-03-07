@@ -1,4 +1,4 @@
-import React, { FormEvent, ElementType } from "react";
+import React from "react";
 import {
   AntDesignOutline,
   DashboardOutline,
@@ -18,32 +18,19 @@ import {
   OverlayTrigger,
   Table,
   Tooltip,
-  FormControlProps
 } from "react-bootstrap";
 import styled from "styled-components";
 
 import ButtonHelp from "./ButtonHelp";
 import PathPicker from "./PathEditor";
 import {
-  BinaryNode,
   PathNode,
   LiteralNode,
-  BlockNode,
-  ConditionNode,
-  VariableNode,
-  ObjectUnaryNode,
-  ArrayUnaryNode,
-  FunctionNode,
-  ApplyNode,
-  BindNode
 } from "jsonata-ui-core";
 import {
-  ParsingState,
   Modes,
-  Mode,
   AST,
   NodeEditorProps,
-  SchemaProvider
 } from "../Types";
 import {
   baseOperators,
@@ -67,7 +54,6 @@ import {
   FunctionEditorProps,
   BindEditorProps
 } from "../Theme";
-import { ReplaceProps, BsPrefixProps } from "react-bootstrap/helpers";
 
 // import { Theme, Icons } from "./Theme";
 type Callback = () => void;

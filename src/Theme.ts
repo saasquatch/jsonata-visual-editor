@@ -14,7 +14,6 @@ import {
 } from "jsonata-ui-core";
 import {
   ParsingState,
-  Modes,
   Mode,
   AST,
   NodeEditorProps,
