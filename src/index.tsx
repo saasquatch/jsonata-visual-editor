@@ -166,10 +166,12 @@ function App() {
         : "✗ serializer bug"}
 
       <table>
-        <tr><th>Examples</th></tr>
-      {options.map(o => (
-        <tr key={o}><td><Button onClick={() => setText(o)}>{o}</Button></td></tr>
-      ))}
+        <tbody>
+          <tr><th>Examples</th></tr>
+          {options.map(o => (
+            <tr key={o}><td><Button onClick={() => setText(o)}>{o}</Button></td></tr>
+          ))}
+        </tbody>
       </table>
       <div style={{ marginTop: "500px" }}>
         <pre>
