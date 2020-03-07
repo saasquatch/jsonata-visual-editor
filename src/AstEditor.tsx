@@ -1147,23 +1147,23 @@ function MathContainerEditor(props: NodeEditorProps<BinaryNode>): JSX.Element {
 function flattenMathNodes({ ast, ...rest }: NodeEditorProps<AST>, theme: Theme, collectedNodes: JSX.Element[] = []): JSX.Element[] {
   if (ast.type == "binary") {
     flattenMathNodes({ ast: ast.lhs, ...rest }, theme, collectedNodes);
-    collectedNodes.push(<theme.MathBinaryOperatorEditor ast={ast} {...rest}/>);
+    collectedNodes.push(<theme.MathBinaryOperatorEditor key={collectedNodes.length} ast={ast} {...rest}/>);
     flattenMathNodes({ ast: ast.rhs, ...rest }, theme, collectedNodes);
   } else if (ast.type === "path") {
-    collectedNodes.push(<theme.MathPathEditor ast={ast} serializedPath={serializer(ast)} {...rest} />);
+    collectedNodes.push(<theme.MathPathEditor key={collectedNodes.length} ast={ast} serializedPath={serializer(ast)} {...rest} />);
   } else if (
     ast.type === "number" ||
     ast.type === "value" ||
     ast.type === "string"
   ) {
-    collectedNodes.push(<theme.MathLiteralEditor ast={ast} {...rest}/>);
+    collectedNodes.push(<theme.MathLiteralEditor key={collectedNodes.length} ast={ast} {...rest}/>);
   } else if (ast.type === "block") {
     const groupedNodes = []
     for (let expression of ast.expressions) {
       flattenMathNodes({ ast: expression, ...rest}, theme, groupedNodes);
     }
     collectedNodes.push(
-      <theme.MathBlockEditor ast={ast} {...rest}>
+      <theme.MathBlockEditor key={collectedNodes.length} ast={ast} {...rest}>
         {groupedNodes}
       </theme.MathBlockEditor>
     );
