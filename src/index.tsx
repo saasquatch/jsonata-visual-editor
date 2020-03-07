@@ -168,7 +168,7 @@ function App() {
       <table>
         <tr><th>Examples</th></tr>
       {options.map(o => (
-        <tr><td><Button onClick={() => setText(o)}>{o}</Button></td></tr>
+        <tr key={o}><td><Button onClick={() => setText(o)}>{o}</Button></td></tr>
       ))}
       </table>
       <div style={{ marginTop: "500px" }}>
