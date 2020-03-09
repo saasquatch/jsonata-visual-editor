@@ -28,6 +28,7 @@ import styled from "styled-components";
 import ButtonHelp from "./ButtonHelp";
 import PathPicker from "./PathEditor";
 import {
+  serializer,
   BinaryNode,
   PathNode,
   LiteralNode,
@@ -70,11 +71,8 @@ import {
   ApplyEditorProps,
   FunctionEditorProps,
   BindEditorProps,
-  MathContainerEditorProps,
-  MathBinaryOperatorEditorProps,
-  MathPathEditorProps,
-  MathLiteralEditorProps,
-  MathBlockEditorProps,
+  MathEditorProps,
+  MathPart
 } from "../Theme";
 import { ReplaceProps, BsPrefixProps } from "react-bootstrap/helpers";
 
@@ -564,7 +562,7 @@ function BindEditor({ lhs, rhs }: BindEditorProps) {
   );
 }
 
-const MathContainer = styled.div`
+const Math = styled.div`
   * {
     margin-left: 2px;
     margin-right: 2px;
@@ -591,16 +589,16 @@ const MathGroup = styled.span`
   }
 `;
 
-function MathContainerEditor({ 
-  children, 
-  text, 
-  onChangeText, 
-  parsing, 
+function MathEditor({
+  children,
+  text,
+  textChange,
+  parsing,
   ast,
   changeType,
   onChange,
   cols = "5"
-}: MathContainerEditorProps) {
+}: MathEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const originalText = useRef(text);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -614,15 +612,45 @@ function MathContainerEditor({
   function handleBlur(e: React.FocusEvent<HTMLInputElement>) {
     if (parsing.error) {
       e.preventDefault();
-      onChangeText(originalText.current);
+      textChange(originalText.current);
     }
     setIsEditing(false);
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" && parsing.error) {
+      e.preventDefault();
+      return;
+    } 
+
     if (e.key === "Enter" || e.key === "Escape") {
       e.currentTarget.blur();
     }
+  }
+
+  function renderMathChildren(children: MathPart[]) {
+    return <span>
+      {children.map((part, i) => {
+        if (part.type === "ast") {
+          if (part.ast.type === "path" || part.ast.type === "variable") {
+            const serialized = serializer(part.ast);
+            return <MathBadge key={i} variant="primary">{serialized}</MathBadge>;
+          } else if (part.ast.type === "block") {
+            return <span>
+              <span style={{marginRight: 0}}>(</span>
+              {renderMathChildren(part.children)}
+              <span style={{marginLeft: 0}}>)</span>
+            </span>
+            return <span>TODO</span>;
+          } else {
+            const serialized = serializer(part.ast);
+            return <span key={i}>{serialized}</span>;
+          }
+        } else if (part.type === "operator") {
+          return <span key={i}><b>{part.operator === "*" ? "x" : part.operator}</b></span>;
+        }
+      })}
+    </span>
   }
 
   if (isEditing) {
@@ -634,10 +662,10 @@ function MathContainerEditor({
           type="text"
           placeholder="Enter a math expression"
           value={text}
-          onChange={e => onChangeText(e.target.value)}
+          onChange={e => textChange(e.target.value)}
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
-          isInvalid={!!parsing.error} 
+          isInvalid={!!parsing.error}
         />
         <Form.Control.Feedback type="invalid">
           {parsing.error}
@@ -647,37 +675,17 @@ function MathContainerEditor({
   } else {
     return (
       <InputGroup as={Col} sm={cols}>
-        <MathContainer 
-          className="form-control" 
-          onClick={() => setIsEditing(true)} 
+        <Math
+          className="form-control"
+          onClick={() => setIsEditing(true)}
           style={{userSelect: "none"}}
         >
-          {children}
-        </MathContainer>
+          {renderMathChildren(children)}
+        </Math>
         <TypeSwitch ast={ast} onChange={onChange} changeType={changeType} />
       </InputGroup>
     );
   }
-}
-
-function MathBinaryOperatorEditor({ ast }: MathBinaryOperatorEditorProps) {
-  return <span><b>{ast.value === "*" ? "x" : ast.value}</b></span>;
-}
-
-function MathPathEditor({ ast, serializedPath }: MathPathEditorProps) {
-  return <MathBadge variant="primary">{serializedPath}</MathBadge>
-}
-
-function MathLiteralEditor({ ast }: MathLiteralEditorProps) {
-  return <span>{ast.value}</span>;
-}
-
-function MathBlockEditor({ ast, children }: MathBlockEditorProps) {
-  return <>
-    <span style={{marginRight: 0}}>(</span>
-    <MathGroup>{children}</MathGroup>
-    <span style={{marginLeft: 0}}>)</span>
-  </>;
 }
 
 export const DefaultTheme = {
@@ -711,9 +719,5 @@ export const DefaultTheme = {
   /*
     Math editors
   */
-  MathContainerEditor,
-  MathBinaryOperatorEditor,
-  MathPathEditor,
-  MathLiteralEditor,
-  MathBlockEditor
+  MathEditor,
 };

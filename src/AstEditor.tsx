@@ -32,7 +32,7 @@ import * as _consts from "./Consts";
 import { StandardDefaultProvider } from "./util/DefaultProvider";
 
 import * as Types from "./Types";
-import { Theme } from "./Theme";
+import { Theme, MathPart } from "./Theme";
 import _paths from "./schema/PathSuggester";
 import * as SchemaProvider from "./schema/SchemaProvider";
 // re-export types for theming purposes
@@ -314,7 +314,7 @@ function BinaryEditor(props: NodeEditorProps<BinaryNode>) {
     return <ComparisonEditor {...props} />;
   }
   if (Object.keys(Consts.mathOperators).includes(props.ast.value)) {
-    return <MathContainerEditor {...props} />;
+    return <MathEditor {...props} />;
   }
 }
 
@@ -1099,14 +1099,14 @@ function FunctionEditor({
   );
 }
 
-function MathContainerEditor(props: NodeEditorProps<BinaryNode>): JSX.Element {
+function MathEditor(props: NodeEditorProps<BinaryNode>): JSX.Element {
   const { theme, defaultProvider } = Context.useContainer();
   const [text, setText] = useState(serializer(props.ast));
   const [parsing, setParsing] = useState<ParsingState>({
     inProgress: false,
   });
-  const nodes = flattenMathNodes(props, theme);
   const changeType = () => { props.onChange(nextAst(props.ast, defaultProvider)) };
+  const parts = flattenMathParts(props.ast, props.onChange);
 
   function onChangeText(newText: string) {
     let error: string | undefined = undefined;
@@ -1132,45 +1132,54 @@ function MathContainerEditor(props: NodeEditorProps<BinaryNode>): JSX.Element {
   }
 
   return (
-    <theme.MathContainerEditor 
+    <theme.MathEditor 
       text={text} 
-      onChangeText={onChangeText} 
+      children={parts}
+      textChange={onChangeText} 
       parsing={parsing} 
       changeType={changeType}
       {...props}
-    >
-      {nodes}
-    </theme.MathContainerEditor>
+    />
   );
 }
 
-function flattenMathNodes({ ast, ...rest }: NodeEditorProps<AST>, theme: Theme, collectedNodes: JSX.Element[] = []): JSX.Element[] {
+function flattenMathParts(ast: AST, onChange: OnChange, collectedParts: MathPart[] = []): MathPart[] {
   if (ast.type == "binary") {
-    flattenMathNodes({ ast: ast.lhs, ...rest }, theme, collectedNodes);
-    collectedNodes.push(<theme.MathBinaryOperatorEditor key={collectedNodes.length} ast={ast} {...rest}/>);
-    flattenMathNodes({ ast: ast.rhs, ...rest }, theme, collectedNodes);
-  } else if (ast.type === "path") {
-    collectedNodes.push(<theme.MathPathEditor key={collectedNodes.length} ast={ast} serializedPath={serializer(ast)} {...rest} />);
-  } else if (
-    ast.type === "number" ||
-    ast.type === "value" ||
-    ast.type === "string"
-  ) {
-    collectedNodes.push(<theme.MathLiteralEditor key={collectedNodes.length} ast={ast} {...rest}/>);
-  } else if (ast.type === "block") {
-    const groupedNodes = []
-    for (let expression of ast.expressions) {
-      flattenMathNodes({ ast: expression, ...rest}, theme, groupedNodes);
-    }
-    collectedNodes.push(
-      <theme.MathBlockEditor key={collectedNodes.length} ast={ast} {...rest}>
-        {groupedNodes}
-      </theme.MathBlockEditor>
+    flattenMathParts(
+      ast.lhs, 
+      (newAst: AST) => onChange({ ...ast, lhs: newAst }), 
+      collectedParts
     );
+    collectedParts.push({
+     type: "operator",
+     operator: ast.value,
+     onChangeOperator: () => { /* TODO */ }
+    });
+    flattenMathParts(
+      ast.rhs, 
+      (newAst: AST) => onChange({ ...ast, rhs: newAst }), 
+      collectedParts
+    );
+  } else if (ast.type === "block") {
+     const blockParts = []
+     for (let expression of ast.expressions) {
+       flattenMathParts(expression, onChange, blockParts);
+     }
+     collectedParts.push({
+      type: "ast",
+      ast,
+      onChange,
+      children: blockParts,
+      editor: <BlockEditor ast={ast} onChange={onChange}/>
+     });
   } else {
-    throw new Error("Unsupported math node type: " + ast.type);
+    collectedParts.push({
+      type: "ast",
+      ast,
+      onChange, 
+      editor: <NodeEditor ast={ast} onChange={onChange} />
+    });
   }
-
-  return collectedNodes;
+  return collectedParts;
 }
 
