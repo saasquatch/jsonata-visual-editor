@@ -48,7 +48,7 @@ function BlockEditor(props: BlockEditorProps) {
   return (
     <>
       <span style={{ marginRight: 0 }}>(</span>
-      {props.children}
+      <MathGroup>{props.children}</MathGroup>
       <span style={{ marginLeft: 0 }}>)</span>
     </>
   );
