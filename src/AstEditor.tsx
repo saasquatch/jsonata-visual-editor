@@ -1144,6 +1144,14 @@ function MathEditor(props: NodeEditorProps<BinaryNode>): JSX.Element {
 }
 
 function flattenMathParts(ast: AST, onChange: OnChange, collectedParts: MathPart[] = []): MathPart[] {
+  function onChangeOperator(newOperator: string) {
+    if (Object.keys(Consts.mathOperators).includes(newOperator)) {
+      onChange({ ...ast, value: newOperator } as BinaryNode);
+    } else {
+      throw new Error("Not a valid math operator");
+    }
+  }
+
   if (ast.type == "binary") {
     flattenMathParts(
       ast.lhs, 
@@ -1153,7 +1161,7 @@ function flattenMathParts(ast: AST, onChange: OnChange, collectedParts: MathPart
     collectedParts.push({
      type: "operator",
      operator: ast.value,
-     onChangeOperator: () => { /* TODO */ }
+     onChangeOperator
     });
     flattenMathParts(
       ast.rhs, 

@@ -74,6 +74,8 @@ import {
   MathEditorProps,
   MathPart
 } from "../Theme";
+import { Context } from "../AstEditor";
+import { MathTheme } from "./MathTheme";
 import { ReplaceProps, BsPrefixProps } from "react-bootstrap/helpers";
 
 // import { Theme, Icons } from "./Theme";
@@ -573,22 +575,6 @@ const Math = styled.div`
   }
 `;
 
-const MathBadge = styled(Badge)`
-  font-size: 100%;
-`;
-
-const MathGroup = styled.span`
-  margin-left: 0;
-  margin-right: 0;
-
-  *:first-child {
-    margin-left: 0;
-  }
-  *:last-child {
-    margin-right: 0;
-  }
-`;
-
 function MathEditor({
   children,
   text,
@@ -599,6 +585,7 @@ function MathEditor({
   onChange,
   cols = "5"
 }: MathEditorProps) {
+  const context = Context.useContainer();
   const [isEditing, setIsEditing] = useState(false);
   const originalText = useRef(text);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -628,31 +615,6 @@ function MathEditor({
     }
   }
 
-  function renderMathChildren(children: MathPart[]) {
-    return <span>
-      {children.map((part, i) => {
-        if (part.type === "ast") {
-          if (part.ast.type === "path" || part.ast.type === "variable") {
-            const serialized = serializer(part.ast);
-            return <MathBadge key={i} variant="primary">{serialized}</MathBadge>;
-          } else if (part.ast.type === "block") {
-            return <span>
-              <span style={{marginRight: 0}}>(</span>
-              {renderMathChildren(part.children)}
-              <span style={{marginLeft: 0}}>)</span>
-            </span>
-            return <span>TODO</span>;
-          } else {
-            const serialized = serializer(part.ast);
-            return <span key={i}>{serialized}</span>;
-          }
-        } else if (part.type === "operator") {
-          return <span key={i}><b>{part.operator === "*" ? "x" : part.operator}</b></span>;
-        }
-      })}
-    </span>
-  }
-
   if (isEditing) {
     return (
       <InputGroup as={Col} sm={cols}>
@@ -680,7 +642,18 @@ function MathEditor({
           onClick={() => setIsEditing(true)}
           style={{userSelect: "none"}}
         >
-          {renderMathChildren(children)}
+          <Context.Provider initialState={{
+            ...context,
+            theme: MathTheme
+          }}>
+            {children.map(part => {
+              if (part.type === "ast") {
+                return part.editor;
+              } else if (part.type === "operator") {
+                return <span><b>{part.operator === "*" ? "x" : part.operator}</b></span>
+              }
+            })}
+          </Context.Provider>
         </Math>
         <TypeSwitch ast={ast} onChange={onChange} changeType={changeType} />
       </InputGroup>
