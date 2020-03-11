@@ -75,7 +75,7 @@ import {
   MathPart
 } from "../Theme";
 import { Context } from "../AstEditor";
-import { MathTheme } from "./MathTheme";
+import { MathTheme } from "./DefaultMathTheme";
 import { ReplaceProps, BsPrefixProps } from "react-bootstrap/helpers";
 
 // import { Theme, Icons } from "./Theme";

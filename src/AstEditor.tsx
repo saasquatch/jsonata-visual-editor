@@ -64,7 +64,7 @@ export const Context = createContainer(useEditorContext);
 
 export const isNumberNode = (n: AST) => n.type === "number";
 export const isPathNode = (n: AST) => n.type === "path";
-export const isMath = (n: AST) => n.type === "binary" && Object.keys(Consts.mathOperators).includes(n.value);
+export const isMath = (n: AST): n is BinaryNode => n.type === "binary" && Object.keys(Consts.mathOperators).includes(n.value);
 
 type State =
   | {
@@ -1152,7 +1152,7 @@ function flattenMathParts(ast: AST, onChange: OnChange, collectedParts: MathPart
     }
   }
 
-  if (ast.type == "binary") {
+  if (isMath(ast)) {
     flattenMathParts(
       ast.lhs, 
       (newAst: AST) => onChange({ ...ast, lhs: newAst }), 
@@ -1168,18 +1168,6 @@ function flattenMathParts(ast: AST, onChange: OnChange, collectedParts: MathPart
       (newAst: AST) => onChange({ ...ast, rhs: newAst }), 
       collectedParts
     );
-  } else if (ast.type === "block") {
-     const blockParts = []
-     for (let expression of ast.expressions) {
-       flattenMathParts(expression, onChange, blockParts);
-     }
-     collectedParts.push({
-      type: "ast",
-      ast,
-      onChange,
-      children: blockParts,
-      editor: <BlockEditor ast={ast} onChange={onChange}/>
-     });
   } else {
     collectedParts.push({
       type: "ast",
