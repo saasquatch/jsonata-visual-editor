@@ -1,4 +1,4 @@
-import React, { FormEvent, ElementType } from "react";
+import React, { FormEvent, ElementType, useState, useEffect, useRef } from "react";
 import {
   AntDesignOutline,
   DashboardOutline,
@@ -6,7 +6,8 @@ import {
   NumberOutline,
   TableOutline,
   CloseCircleOutline,
-  CheckSquareOutline
+  CheckSquareOutline,
+  PlusOutline
 } from "@ant-design/icons";
 import AntdIcon from "@ant-design/icons-react";
 import {
@@ -18,13 +19,16 @@ import {
   OverlayTrigger,
   Table,
   Tooltip,
-  FormControlProps
+  FormControl,
+  FormControlProps,
+  Badge
 } from "react-bootstrap";
 import styled from "styled-components";
 
 import ButtonHelp from "./ButtonHelp";
 import PathPicker from "./PathEditor";
 import {
+  serializer,
   BinaryNode,
   PathNode,
   LiteralNode,
@@ -49,6 +53,7 @@ import {
   baseOperators,
   numberOperators,
   arrayOperators,
+  mathOperators
 } from "../Consts";
 import {
   IDETextareaProps,
@@ -65,8 +70,12 @@ import {
   RootNodeEditorProps,
   ApplyEditorProps,
   FunctionEditorProps,
-  BindEditorProps
+  BindEditorProps,
+  MathEditorProps,
+  MathPart
 } from "../Theme";
+import { Context } from "../AstEditor";
+import { MathTheme } from "./DefaultMathTheme";
 import { ReplaceProps, BsPrefixProps } from "react-bootstrap/helpers";
 
 // import { Theme, Icons } from "./Theme";
@@ -91,13 +100,15 @@ AntdIcon.add(
   DashboardOutline,
   FontSizeOutline,
   NumberOutline,
-  CloseCircleOutline
+  CloseCircleOutline,
+  PlusOutline
 );
 const IconMap = {
   number: NumberOutline,
   string: FontSizeOutline,
   path: TableOutline,
-  value: CheckSquareOutline
+  value: CheckSquareOutline,
+  binary: PlusOutline
 };
 
 function Icon(props: { type: string }) {
@@ -108,13 +119,14 @@ const DescriptionMap = {
   number: "We'll compare this as a number. Click to change.",
   string: "We'll compare this as a string. Click to change.",
   path: "We'll use this as a variable name. Click to change.",
-  value: " We'll compare this as a boolean. Click to change."
+  value: "We'll compare this as a boolean. Click to change.",
+  binary: "We'll treat this as a math expression. Click to change."
 };
 
 function TypeSwitch({
   ast,
   changeType
-}: NodeEditorProps<LiteralNode | PathNode> & { changeType: Callback }) {
+}: NodeEditorProps<LiteralNode | PathNode | BinaryNode> & { changeType: Callback }) {
   return (
     <OverlayTrigger
       trigger="hover"
@@ -552,6 +564,103 @@ function BindEditor({ lhs, rhs }: BindEditorProps) {
   );
 }
 
+const Math = styled.div`
+  * {
+    margin-left: 2px;
+    margin-right: 2px;
+  }
+
+  *:first-child {
+    margin-left: 0;
+  }
+`;
+
+function MathEditor({
+  children,
+  text,
+  textChange,
+  parsing,
+  ast,
+  changeType,
+  onChange,
+  cols = "5"
+}: MathEditorProps) {
+  const context = Context.useContainer();
+  const [isEditing, setIsEditing] = useState(false);
+  const originalText = useRef(text);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isEditing]);
+
+  function handleBlur(e: React.FocusEvent<HTMLInputElement>) {
+    if (parsing.error) {
+      e.preventDefault();
+      textChange(originalText.current);
+    }
+    setIsEditing(false);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" && parsing.error) {
+      e.preventDefault();
+      return;
+    } 
+
+    if (e.key === "Enter" || e.key === "Escape") {
+      e.currentTarget.blur();
+    }
+  }
+
+  if (isEditing) {
+    return (
+      <InputGroup as={Col} sm={cols}>
+        <Form.Control
+          as="input"
+          ref={inputRef as React.RefObject<any>}
+          type="text"
+          placeholder="Enter a math expression"
+          value={text}
+          onChange={e => textChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={handleBlur}
+          isInvalid={!!parsing.error}
+        />
+        <Form.Control.Feedback type="invalid">
+          {parsing.error}
+        </Form.Control.Feedback>
+      </InputGroup>
+    );
+  } else {
+    return (
+      <InputGroup as={Col} sm={cols}>
+        <Math
+          className="form-control"
+          onClick={() => setIsEditing(true)}
+          style={{userSelect: "none"}}
+        >
+          <Context.Provider initialState={{
+            ...context,
+            theme: MathTheme
+          }}>
+            {children.map(part => {
+              if (part.type === "ast") {
+                return part.editor;
+              } else if (part.type === "operator") {
+                return <span><b>{part.operator === "*" ? "x" : part.operator}</b></span>
+              }
+            })}
+          </Context.Provider>
+        </Math>
+        <TypeSwitch ast={ast} onChange={onChange} changeType={changeType} />
+      </InputGroup>
+    );
+  }
+}
+
 export const DefaultTheme = {
   /*
     Base editors
@@ -578,5 +687,10 @@ export const DefaultTheme = {
   BindEditor,
   VariableEditor,
   LeafValueEditor,
-  PathEditor
+  PathEditor,
+
+  /*
+    Math editors
+  */
+  MathEditor,
 };

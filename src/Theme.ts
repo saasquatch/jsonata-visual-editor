@@ -51,6 +51,11 @@ export type Theme = {
   VariableEditor: Comp<VariableEditorProps>;
   LeafValueEditor: Comp<LeafValueEditorProps>;
   PathEditor: Comp<PathEditorProps>;
+
+  /*
+      Math editors
+    */
+  MathEditor: Comp<MathEditorProps>;
 };
 
 export interface IDETextareaProps {
@@ -59,26 +64,24 @@ export interface IDETextareaProps {
   parsing: ParsingState;
 }
 
+export type ChildNodeProps = {
+  editor: JSX.Element;
+  ast: NodeEditorProps<AST>["ast"];
+  onChange: NodeEditorProps<AST>["onChange"];
+};
+
 export type CombinerEditorProps = NodeEditorProps<BinaryNode> & {
   addNew: Callback;
   removeLast: Callback;
   combinerOperators: { [key: string]: string };
   // @deprecated. use ChildNodes
   children: JSX.Element[];
-  childNodes: {
-    editor: JSX.Element;
-    ast: NodeEditorProps<AST>["ast"];
-    onChange: NodeEditorProps<AST>["onChange"];
-  }[];
+  childNodes: ChildNodeProps[];
 };
 
 export type BlockEditorProps = NodeEditorProps<BlockNode> & {
   children: Children;
-  childNodes: {
-    editor: JSX.Element;
-    ast: NodeEditorProps<AST>["ast"];
-    onChange: NodeEditorProps<AST>["onChange"];
-  }[];
+  childNodes: ChildNodeProps[];
 };
 
 export type ObjectUnaryEditorProps = NodeEditorProps<ObjectUnaryNode> & {
@@ -98,12 +101,7 @@ export type VariableEditorProps = NodeEditorProps<VariableNode> & {
 };
 
 export type ArrayUnaryEditorProps = NodeEditorProps<ArrayUnaryNode> & {
-  children: {
-    editor: JSX.Element;
-    remove: Callback;
-    ast: NodeEditorProps<AST>["ast"];
-    onChange: NodeEditorProps<AST>["onChange"];
-  }[];
+  children: (ChildNodeProps & { remove: Callback })[];
   addNew: Callback;
   removeLast: Callback;
 };
@@ -155,20 +153,12 @@ export type ApplyEditorProps = NodeEditorProps<ApplyNode> & {
   lhs: JSX.Element;
   children: Children;
   lhsProps: NodeEditorProps<AST>;
-  childNodes: {
-    editor: JSX.Element;
-    ast: NodeEditorProps<AST>["ast"];
-    onChange: NodeEditorProps<AST>["onChange"];
-  }[];
+  childNodes: ChildNodeProps[];
 };
 
 export type FunctionEditorProps = NodeEditorProps<FunctionNode> & {
   args: Children;
-  argumentNodes: {
-    editor: JSX.Element;
-    ast: NodeEditorProps<AST>["ast"];
-    onChange: NodeEditorProps<AST>["onChange"];
-  }[];
+  argumentNodes: ChildNodeProps[];
   changeProcedure: OnChange<String>;
 };
 
@@ -178,3 +168,17 @@ export type BindEditorProps = NodeEditorProps<BindNode> & {
   lhsProps: NodeEditorProps<AST>;
   rhsProps: NodeEditorProps<AST>;
 };
+
+export type MathEditorProps = NodeEditorProps<BinaryNode> & {
+  text: string;
+  children: MathPart[];
+  changeType: Callback;
+} & IDETextareaProps;
+
+export type MathPart =
+  | ({ type: "ast", children?: MathPart[] } & ChildNodeProps)
+  | {
+      type: "operator";
+      operator: string;
+      onChangeOperator: OnChange<string>;
+    };

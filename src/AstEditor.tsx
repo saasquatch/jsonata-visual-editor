@@ -15,7 +15,8 @@ import {
   ArrayUnaryNode,
   ApplyNode,
   FunctionNode,
-  BindNode
+  BindNode,
+  NameNode
 } from "jsonata-ui-core";
 import {
   ParsingState,
@@ -31,6 +32,7 @@ import * as _consts from "./Consts";
 import { StandardDefaultProvider } from "./util/DefaultProvider";
 
 import * as Types from "./Types";
+import { Theme, MathPart } from "./Theme";
 import _paths from "./schema/PathSuggester";
 import * as SchemaProvider from "./schema/SchemaProvider";
 // re-export types for theming purposes
@@ -62,6 +64,7 @@ export const Context = createContainer(useEditorContext);
 
 export const isNumberNode = (n: AST) => n.type === "number";
 export const isPathNode = (n: AST) => n.type === "path";
+export const isMath = (n: AST): n is BinaryNode => n.type === "binary" && Object.keys(Consts.mathOperators).includes(n.value);
 
 type State =
   | {
@@ -310,8 +313,9 @@ function BinaryEditor(props: NodeEditorProps<BinaryNode>) {
   if (Object.keys(Consts.comparionsOperators).includes(props.ast.value)) {
     return <ComparisonEditor {...props} />;
   }
-  throw new Error("Unimplemented binary node");
-  // TODO: Implement MathNode
+  if (Object.keys(Consts.mathOperators).includes(props.ast.value)) {
+    return <MathEditor {...props} />;
+  }
 }
 
 function ComparisonEditor(props: NodeEditorProps<BinaryNode>): JSX.Element {
@@ -497,6 +501,18 @@ function PathEditor({
 }
 
 function nextAst(ast: AST, defaults: DefaultProvider): AST {
+  // If a math expression has been typed as a string, we can upconvert it
+  if (ast.type === "string") {
+    try {
+      const testAst = jsonata(ast.value as string).ast() as AST;
+      if (isMath(testAst)) {
+        return testAst;
+      }
+    } catch (e) {
+
+    }
+  }
+
   if (ast.type !== "path") {
     // @ts-ignore
     if (ast.value && !isNaN(ast.value)) {
@@ -1082,3 +1098,84 @@ function FunctionEditor({
     />
   );
 }
+
+function MathEditor(props: NodeEditorProps<BinaryNode>): JSX.Element {
+  const { theme, defaultProvider } = Context.useContainer();
+  const [text, setText] = useState(serializer(props.ast));
+  const [parsing, setParsing] = useState<ParsingState>({
+    inProgress: false,
+  });
+  const changeType = () => { props.onChange(nextAst(props.ast, defaultProvider)) };
+  const parts = flattenMathParts(props.ast, props.onChange);
+
+  function onChangeText(newText: string) {
+    let error: string | undefined = undefined;
+    setParsing({
+      inProgress: true,
+      error
+    });
+    try {
+      const newAst = jsonata(newText).ast() as AST;
+      if (!isMath(newAst)) {
+        throw new Error("that's not a math expressions");
+      }
+      props.onChange(newAst);
+    } catch (e) {
+      error = "Parsing Error: " + e.message;
+    } finally {
+     setParsing({
+       inProgress: false,
+       error
+     });
+     setText(newText);
+    }
+  }
+
+  return (
+    <theme.MathEditor 
+      text={text} 
+      children={parts}
+      textChange={onChangeText} 
+      parsing={parsing} 
+      changeType={changeType}
+      {...props}
+    />
+  );
+}
+
+function flattenMathParts(ast: AST, onChange: OnChange, collectedParts: MathPart[] = []): MathPart[] {
+  function onChangeOperator(newOperator: string) {
+    if (Object.keys(Consts.mathOperators).includes(newOperator)) {
+      onChange({ ...ast, value: newOperator } as BinaryNode);
+    } else {
+      throw new Error("Not a valid math operator");
+    }
+  }
+
+  if (isMath(ast)) {
+    flattenMathParts(
+      ast.lhs, 
+      (newAst: AST) => onChange({ ...ast, lhs: newAst }), 
+      collectedParts
+    );
+    collectedParts.push({
+     type: "operator",
+     operator: ast.value,
+     onChangeOperator
+    });
+    flattenMathParts(
+      ast.rhs, 
+      (newAst: AST) => onChange({ ...ast, rhs: newAst }), 
+      collectedParts
+    );
+  } else {
+    collectedParts.push({
+      type: "ast",
+      ast,
+      onChange, 
+      editor: <NodeEditor ast={ast} onChange={onChange} />
+    });
+  }
+  return collectedParts;
+}
+
