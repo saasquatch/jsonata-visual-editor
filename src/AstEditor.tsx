@@ -79,7 +79,7 @@ type State =
     };
 
 export function Editor(props: Types.EditorProps) {
-  const { isValidBasicExpression = DefaultValidBasicExpression, text } = props;
+  const { isValidBasicExpression = defaultIsValidBasicExpression, text } = props;
   const initialState = (): State => {
     try {
       let newAst = jsonata(props.text).ast() as AST;
@@ -169,8 +169,16 @@ export function Editor(props: Types.EditorProps) {
   );
 }
 
-function DefaultValidBasicExpression(ast: AST): null {
-  return null;
+export function defaultIsValidBasicExpression(ast: AST): string | null {
+  const advancedOnly = jsonata(`**[type = "block" or type = "lambda" or type = "transform" or (type = "binary" and value = "&")]`);
+  try {
+    if(advancedOnly.evaluate(ast)) {
+      return "Can't use basic editor for advanced expressions. Try a simpler expression.";
+    } 
+  } catch (e) {
+    return "Failed to evaluate expression";
+  }
+  return null;;
 }
 
 function NodeEditor(props: NodeEditorProps<AST>): JSX.Element {
