@@ -5,7 +5,7 @@ import { Col, Badge, Button } from "react-bootstrap";
 import jsonata from "jsonata";
 import { serializer, ConditionNode } from "jsonata-ui-core";
 
-import { Editor } from "./AstEditor";
+import { Editor, defaultIsValidBasicExpression } from "./AstEditor";
 import { DefaultTheme } from "./theme/DefaultTheme";
 import { AST } from "./Types";
 import { makeSchemaProvider } from "./schema/SchemaProvider";
@@ -38,12 +38,18 @@ const NodeWhitelist = jsonata(`
 `);
 
 function isValidBasicExpression(newValue: AST): string | null {
-  try {
-    if (NodeWhitelist.evaluate(newValue)) {
-      return null;
+  // Check the default basic expression first if you just want to add to it
+  const defaultResult = defaultIsValidBasicExpression(newValue);
+
+  if (defaultResult === null) {
+    try {
+      if (NodeWhitelist.evaluate(newValue)) {
+        return null;
+      }
+    } catch (e) {}
+    return "Can't use basic editor for advanced expressions. Try a simpler expression.";
     }
-  } catch (e) {}
-  return "Can't use basic editor for advanced expressions. Try a simpler expression.";
+  return defaultResult;
 }
 
 type VariableEditor = typeof DefaultTheme.VariableEditor;
