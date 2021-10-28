@@ -29,8 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Math support added to text fields
 
-[unreleased]: https://github.com/saasquatch/program-tools/compare/jsonata-visual-editor@0.4.1...HEAD
-[0.4.1]: https://github.com/saasquatch/program-tools/releases/tag/jsonata-visual-editor@0.4.1
-[0.4.0]: https://github.com/saasquatch/program-tools/releases/tag/jsonata-visual-editor@0.4.0
-[0.3.10]: https://github.com/saasquatch/program-tools/releases/tag/jsonata-visual-editor@0.3.10
-[0.3.8]: https://github.com/saasquatch/program-tools/releases/tag/jsonata-visual-editor@0.3.8
+[unreleased]: https://github.com/jsonata-ui/jsonata-visual-editor/compare/jsonata-visual-editor@0.4.1...HEAD
+[0.4.1]: https://github.com/jsonata-ui/jsonata-visual-editor/releases/tag/jsonata-visual-editor@0.4.1
+[0.4.0]: https://github.com/jsonata-ui/jsonata-visual-editor/releases/tag/jsonata-visual-editor@0.4.0
+[0.3.10]: https://github.com/jsonata-ui/jsonata-visual-editor/releases/tag/jsonata-visual-editor@0.3.10
+[0.3.8]: https://github.com/jsonata-ui/jsonata-visual-editor/releases/tag/jsonata-visual-editor@0.3.8
