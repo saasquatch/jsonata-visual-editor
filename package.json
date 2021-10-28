@@ -1,6 +1,6 @@
 {
   "name": "jsonata-visual-editor",
-  "version": "0.4.0",
+  "version": "0.4.1-4",
   "description": "Visual editor for JSONata expressions. Themeable to your needs, default theme is Boostrap 4",
   "keywords": [
     "jsonata"
@@ -25,8 +25,8 @@
     "@mrblenny/react-flow-chart": "0.0.8",
     "@types/json-schema": "7.0.3",
     "microbundle": "0.11.0",
-    "react-bootstrap": "1.0.0-beta.14",
     "react": "16.8.6",
+    "react-bootstrap": "1.0.0-beta.14",
     "react-dom": "16.8.6",
     "react-scripts": "3.2.0",
     "react-select": "3.0.8",

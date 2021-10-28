@@ -28,7 +28,7 @@ function getPaths(schema: JsonSchema, parentOpts: ParentOpts = {}): Path[] {
     pathPrefix,
     isJsonataSequence = false,
     titlePath = [],
-    typePath = []
+    typePath = [],
   } = parentOpts;
   const pfixed = (k?: string) => {
     if (!k) return pathPrefix;
@@ -39,6 +39,9 @@ function getPaths(schema: JsonSchema, parentOpts: ParentOpts = {}): Path[] {
     return [...acc, ...getPaths(s, parentOpts)];
   }
   let paths: Path[] = [];
+
+  if (!schema) return paths;
+
   if (schema.anyOf) {
     paths = [...paths, ...schema.anyOf.reduce(ChildPathReducer, [])];
   }
@@ -50,17 +53,20 @@ function getPaths(schema: JsonSchema, parentOpts: ParentOpts = {}): Path[] {
   }
   const { type } = schema;
   if (type === "object") {
-    const objectPaths = Object.keys(schema.properties || {}).reduce((acc, k) => {
-      const subSchema = schema.properties[k];
-      const subPaths: Path[] = getPaths(subSchema, {
-        ...parentOpts,
-        pathPrefix: pfixed(k),
-        titlePath: [...titlePath, schema.title],
-        typePath: [...typePath, type]
-      });
+    const objectPaths = Object.keys(schema.properties || {}).reduce(
+      (acc, k) => {
+        const subSchema = schema.properties[k];
+        const subPaths: Path[] = getPaths(subSchema, {
+          ...parentOpts,
+          pathPrefix: pfixed(k),
+          titlePath: [...titlePath, schema.title],
+          typePath: [...typePath, type],
+        });
 
-      return [...acc, ...subPaths];
-    }, []);
+        return [...acc, ...subPaths];
+      },
+      []
+    );
     paths = [...paths, ...objectPaths];
   } else if (type === "array") {
     paths = [
@@ -68,8 +74,8 @@ function getPaths(schema: JsonSchema, parentOpts: ParentOpts = {}): Path[] {
         pathPrefix: pfixed(),
         titlePath: [...titlePath, schema.title],
         typePath: [...typePath, type],
-        isJsonataSequence: true
-      })
+        isJsonataSequence: true,
+      }),
       // {
       //   path: firstElementPath,
       //   title: pfixedTitle("First Element"),
@@ -92,7 +98,7 @@ function getPaths(schema: JsonSchema, parentOpts: ParentOpts = {}): Path[] {
       type: type as PrimitiveType,
       titlePath: [...titlePath, schema.title],
       typePath: [...typePath, type],
-      isJsonataSequence
+      isJsonataSequence,
     };
     paths = [...paths, path];
   }
