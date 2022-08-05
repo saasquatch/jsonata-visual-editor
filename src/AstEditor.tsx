@@ -77,7 +77,9 @@ export function useContainer() {
   return {
     theme: DefaultTheme,
     defaultProvider: StandardDefaultProvider,
-    schemaProvider: undefined as Types.SchemaProvider | undefined,
+    schemaProvider: SchemaProvider.makeSchemaProvider({
+      type: 'object',
+    }) as Types.SchemaProvider | undefined,
     boundVariables: [],
   };
 }

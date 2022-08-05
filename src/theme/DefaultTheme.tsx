@@ -1,39 +1,42 @@
-import {
-  AntDesignOutlined, CheckSquareOutlined, CloseCircleOutlined, DashboardOutlined,
-  FontSizeOutlined,
-  NumberOutlined, PlusOutlined, TableOutlined
-} from "@ant-design/icons";
-import AntdIcon from "@ant-design/icons-react";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Button,
-  ButtonGroup, Col, Form, InputGroup, OverlayTrigger,
+  ButtonGroup,
+  Col,
+  Form,
+  InputGroup,
+  OverlayTrigger,
   Table,
-  Tooltip
-} from "react-bootstrap";
-import styled from "styled-components";
+  Tooltip,
+} from 'react-bootstrap';
+import styled from 'styled-components';
 
+import { BinaryNode, LiteralNode, PathNode } from 'jsonata-ui-core';
+import { useContainer } from '../AstEditor';
+import { arrayOperators, baseOperators, numberOperators } from '../Consts';
 import {
-  BinaryNode, LiteralNode, PathNode
-} from "jsonata-ui-core";
-import { useContainer } from "../AstEditor";
-import {
-  arrayOperators, baseOperators,
-  numberOperators
-} from "../Consts";
-import {
-  ApplyEditorProps, ArrayUnaryEditorProps, BaseEditorProps, BindEditorProps, BlockEditorProps, CombinerEditorProps, ComparisonEditorProps, ConditionEditorProps, FunctionEditorProps, IDETextareaProps, LeafValueEditorProps, MathEditorProps, ObjectUnaryEditorProps, PathEditorProps, RootNodeEditorProps, VariableEditorProps
-} from "../Theme";
-import {
-  AST, Modes, NodeEditorProps
-} from "../types";
-import ButtonHelp from "./ButtonHelp";
-import PathPicker from "./PathEditor";
+  ApplyEditorProps,
+  ArrayUnaryEditorProps,
+  BaseEditorProps,
+  BindEditorProps,
+  BlockEditorProps,
+  CombinerEditorProps,
+  ComparisonEditorProps,
+  ConditionEditorProps,
+  FunctionEditorProps,
+  IDETextareaProps,
+  LeafValueEditorProps,
+  MathEditorProps,
+  ObjectUnaryEditorProps,
+  PathEditorProps,
+  RootNodeEditorProps,
+  VariableEditorProps,
+} from '../Theme';
+import { AST, Modes, NodeEditorProps } from '../types';
+import ButtonHelp from './ButtonHelp';
+import PathPicker from './PathEditor';
 
-// import { Theme, Icons } from "./Theme";
 type Callback = () => void;
-type OnChange<T> = (val: T) => void;
-type Children = JSX.Element[];
 
 const Inset = styled.div`
   border-left: 10px solid #eee;
@@ -47,24 +50,8 @@ const GrowDiv = styled.div`
   flex-shrink: 1;
 `;
 
-AntdIcon.add(
-  AntDesignOutlined,
-  DashboardOutlined,
-  FontSizeOutlined,
-  NumberOutlined,
-  CloseCircleOutlined,
-  PlusOutlined
-);
-const IconMap = {
-  number: NumberOutlined,
-  string: FontSizeOutlined,
-  path: TableOutlined,
-  value: CheckSquareOutlined,
-  binary: PlusOutlined
-};
-
 function Icon(props: { type: string }) {
-  return <AntdIcon type={IconMap[props.type]} />;
+  return <span>{props.type}</span>;
 }
 
 const DescriptionMap = {
@@ -72,13 +59,15 @@ const DescriptionMap = {
   string: "We'll compare this as a string. Click to change.",
   path: "We'll use this as a variable name. Click to change.",
   value: "We'll compare this as a boolean. Click to change.",
-  binary: "We'll treat this as a math expression. Click to change."
+  binary: "We'll treat this as a math expression. Click to change.",
 };
 
 function TypeSwitch({
   ast,
-  changeType
-}: NodeEditorProps<LiteralNode | PathNode | BinaryNode> & { changeType: Callback }) {
+  changeType,
+}: NodeEditorProps<LiteralNode | PathNode | BinaryNode> & {
+  changeType: Callback;
+}) {
   return (
     <OverlayTrigger
       trigger="hover"
@@ -103,11 +92,13 @@ function IDETextarea(props: IDETextareaProps) {
         as="textarea"
         rows="3"
         value={props.text}
-        onChange={(e:any) => /** @ts-ignore */ props.textChange(e.target.value)}
+        onChange={(e: any) =>
+          /** @ts-ignore */ props.textChange(e.target.value)
+        }
       />
       <br />
       {props.parsing.inProgress ? (
-        "Parsing..."
+        'Parsing...'
       ) : (
         <InlineError>{props.parsing.error}</InlineError>
       )}
@@ -123,9 +114,9 @@ function CombinerEditor(props: CombinerEditorProps) {
           <Form.Control
             as="select"
             value={props.ast.value}
-            onChange={(e:any) => props.onChange(e.target.value)}
+            onChange={(e: any) => props.onChange(e.target.value)}
           >
-            {Object.keys(props.combinerOperators).map(k => (
+            {Object.keys(props.combinerOperators).map((k) => (
               <option key={k} value={k}>
                 {props.combinerOperators[k]}
               </option>
@@ -133,7 +124,7 @@ function CombinerEditor(props: CombinerEditorProps) {
           </Form.Control>
         </InputGroup>
         <Col sm="10">
-          {props.children.map(child => (
+          {props.children.map((child) => (
             <Form.Row>{child}</Form.Row>
           ))}
           <AddRemoveGroup addNew={props.addNew} removeLast={props.removeLast} />
@@ -151,7 +142,7 @@ type AddRemoveGroupProps = {
 function AddRemoveGroup({
   addNew,
   removeLast,
-  canDelete = true
+  canDelete = true,
 }: AddRemoveGroupProps) {
   return (
     <ButtonGroup>
@@ -173,7 +164,7 @@ function ConditionEditor({
   addNew,
   removeLast,
   children,
-  elseEditor
+  elseEditor,
 }: ConditionEditorProps) {
   const canDelete = children.length > 1;
   return (
@@ -187,7 +178,7 @@ function ConditionEditor({
           </tr>
         </thead>
         <tbody>
-          {children.map(pair => {
+          {children.map((pair) => {
             return (
               <tr>
                 <td>{pair.Then}</td>
@@ -222,7 +213,7 @@ function ConditionEditor({
 function ObjectUnaryEditor({
   children,
   addNew,
-  removeLast
+  removeLast,
 }: ObjectUnaryEditorProps) {
   const canDelete = children.length > 1;
   return (
@@ -236,7 +227,7 @@ function ObjectUnaryEditor({
           </tr>
         </thead>
         <tbody>
-          {children.map(c => {
+          {children.map((c) => {
             return (
               <tr>
                 <td>{c.key}</td>
@@ -259,21 +250,21 @@ function ObjectUnaryEditor({
 function VariableEditor({
   ast,
   onChange,
-  cols = "5",
-  boundVariables
+  cols = '5',
+  boundVariables,
 }: VariableEditorProps) {
   return (
     <InputGroup as={Col} sm={cols}>
       <Form.Control
         as="select"
         value={ast.value}
-        onChange={e => {
+        onChange={(e) => {
           // @ts-ignore
           const newValue = { ...ast, value: e.target.value };
           onChange(newValue);
         }}
       >
-        {boundVariables.map(k => (
+        {boundVariables.map((k) => (
           <option key={k} value={k}>
             {k}
           </option>
@@ -286,7 +277,7 @@ function VariableEditor({
 function ArrayUnaryEditor({
   children,
   addNew,
-  removeLast
+  removeLast,
 }: ArrayUnaryEditorProps) {
   const canDelete = children.length > 1;
   return (
@@ -299,7 +290,7 @@ function ArrayUnaryEditor({
           </tr>
         </thead>
         <tbody>
-          {children.map(c => {
+          {children.map((c) => {
             return (
               <tr>
                 <td>{c.editor}</td>
@@ -322,10 +313,10 @@ function LeafValueEditor({
   ast,
   onChange,
   validator,
-  cols = "5",
+  cols = '5',
   onChangeText,
   text,
-  changeType
+  changeType,
 }: LeafValueEditorProps) {
   return (
     <InputGroup as={Col} sm={cols}>
@@ -333,7 +324,7 @@ function LeafValueEditor({
         type="text"
         placeholder="Enter a value"
         value={text}
-        onChange={e => onChangeText(e.target.value)}
+        onChange={(e) => onChangeText(e.target.value)}
       />
       <TypeSwitch ast={ast} onChange={onChange} changeType={changeType} />
 
@@ -348,8 +339,8 @@ function PathEditor({
   ast,
   onChange,
   changeType,
-  cols = "5",
-  schemaProvider
+  cols = '5',
+  schemaProvider,
 }: PathEditorProps) {
   const paths = schemaProvider && schemaProvider.getPaths;
   return (
@@ -357,7 +348,7 @@ function PathEditor({
       <GrowDiv>
         <PathPicker
           value={ast}
-          onChange={option => onChange(option.value as AST)}
+          onChange={(option) => onChange(option.value as AST)}
           paths={paths}
         />
       </GrowDiv>
@@ -372,15 +363,15 @@ function PathEditor({
 function Base({ toggleMode, toggleBlock, mode, editor }: BaseEditorProps) {
   return (
     <div>
-      <div style={{ float: "right" }}>
+      <div style={{ float: 'right' }}>
         <ButtonHelp
           onClick={toggleMode}
-          disabled={toggleBlock?true:false}
+          disabled={toggleBlock ? true : false}
           variant="secondary"
           size="sm"
           disabledHelp={toggleBlock}
         >
-          Switch to {mode === Modes.NodeMode ? "Advanced" : "Basic"}
+          Switch to {mode === Modes.NodeMode ? 'Advanced' : 'Basic'}
         </ButtonHelp>
       </div>
       {editor}
@@ -395,7 +386,7 @@ function ComparisonEditor({
   lhs,
   rhs,
   changeOperator,
-  ast
+  ast,
 }: ComparisonEditorProps) {
   return (
     <>
@@ -405,24 +396,24 @@ function ComparisonEditor({
           <Form.Control
             as="select"
             value={ast.value}
-            onChange={(e:any) => changeOperator(e.target.value)}
+            onChange={(e: any) => changeOperator(e.target.value)}
           >
             <optgroup label="Common Operators">
-              {Object.keys(baseOperators).map(k => (
+              {Object.keys(baseOperators).map((k) => (
                 <option key={k} value={k}>
                   {baseOperators[k]}
                 </option>
               ))}
             </optgroup>
             <optgroup label="Number Operators">
-              {Object.keys(numberOperators).map(k => (
+              {Object.keys(numberOperators).map((k) => (
                 <option key={k} value={k}>
                   {numberOperators[k]}
                 </option>
               ))}
             </optgroup>
             <optgroup label="Array Operators">
-              {Object.keys(arrayOperators).map(k => (
+              {Object.keys(arrayOperators).map((k) => (
                 <option key={k} value={k}>
                   {arrayOperators[k]}
                 </option>
@@ -455,9 +446,9 @@ function ApplyEditor({ lhs, children, ast }: ApplyEditorProps) {
         <Col sm="7">
           <Table>
             <tr>
-              {children.map(c => (
+              {children.map((c) => (
                 <>
-                  <td>{"~>"}</td>
+                  <td>{'~>'}</td>
                   <td>{c}</td>
                 </>
               ))}
@@ -472,14 +463,14 @@ function ApplyEditor({ lhs, children, ast }: ApplyEditorProps) {
 function FunctionEditor({
   args,
   ast,
-  changeProcedure
+  changeProcedure,
 }: FunctionEditorProps): JSX.Element {
   const picker = (
     <InputGroup as={Col} sm="2">
       <Form.Control
         as="select"
         value={ast.procedure.value}
-        onChange={(e:any) => changeProcedure(e.target.value)}
+        onChange={(e: any) => changeProcedure(e.target.value)}
       >
         <option value="contains">$contains</option>
       </Form.Control>
@@ -535,7 +526,7 @@ function MathEditor({
   ast,
   changeType,
   onChange,
-  cols = "5"
+  cols = '5',
 }: MathEditorProps) {
   const context = useContainer();
   const [isEditing, setIsEditing] = useState(false);
@@ -557,12 +548,12 @@ function MathEditor({
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter" && parsing.error) {
+    if (e.key === 'Enter' && parsing.error) {
       e.preventDefault();
       return;
-    } 
+    }
 
-    if (e.key === "Enter" || e.key === "Escape") {
+    if (e.key === 'Enter' || e.key === 'Escape') {
       e.currentTarget.blur();
     }
   }
@@ -576,7 +567,7 @@ function MathEditor({
           type="text"
           placeholder="Enter a math expression"
           value={text}
-          onChange={e => textChange((e.target as HTMLInputElement).value)}
+          onChange={(e) => textChange((e.target as HTMLInputElement).value)}
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
           isInvalid={!!parsing.error}
@@ -592,14 +583,18 @@ function MathEditor({
         <Math
           className="form-control"
           onClick={() => setIsEditing(true)}
-          style={{userSelect: "none"}}
+          style={{ userSelect: 'none' }}
         >
           <>
-            {children.map(part => {
-              if (part.type === "ast") {
+            {children.map((part) => {
+              if (part.type === 'ast') {
                 return part.editor;
-              } else if (part.type === "operator") {
-                return <span><b>{part.operator === "*" ? "x" : part.operator}</b></span>
+              } else if (part.type === 'operator') {
+                return (
+                  <span>
+                    <b>{part.operator === '*' ? 'x' : part.operator}</b>
+                  </span>
+                );
               }
             })}
           </>

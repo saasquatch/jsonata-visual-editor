@@ -1,19 +1,23 @@
-import React from "react";
-import styled from "styled-components";
-import { Badge } from "react-bootstrap";
+import React from 'react';
+import styled from 'styled-components';
 
-import { serializer } from "jsonata-ui-core";
-import { AST, NodeEditorProps } from "../types";
+import { serializer } from 'jsonata-ui-core';
+
 import {
-  Theme,
-  VariableEditorProps,
-  PathEditorProps,
   BlockEditorProps,
   FunctionEditorProps,
-  MathEditorProps
-} from "../Theme";
+  MathEditorProps,
+  PathEditorProps,
+  Theme,
+  VariableEditorProps,
+} from '../Theme';
+import { AST, NodeEditorProps } from '../types';
 
-const MathBadge = styled(Badge)`
+const MathBadge = styled.span`
+  background: grey;
+  display: inline-block;
+  padding: 2px;
+  border-radius: 50%;
   font-size: 100%;
 `;
 
@@ -36,12 +40,12 @@ function DefaultEditor(props: NodeEditorProps<AST>) {
 
 function VariableEditor(props: VariableEditorProps) {
   const serialized = serializer(props.ast);
-  return <MathBadge variant="primary">{serialized}</MathBadge>;
+  return <MathBadge>{serialized}</MathBadge>;
 }
 
 function PathEditor(props: PathEditorProps) {
   const serialized = serializer(props.ast);
-  return <MathBadge variant="primary">{serialized}</MathBadge>;
+  return <MathBadge>{serialized}</MathBadge>;
 }
 
 function BlockEditor(props: BlockEditorProps) {
@@ -57,7 +61,7 @@ function BlockEditor(props: BlockEditorProps) {
 function FunctionEditor(props: FunctionEditorProps) {
   return (
     <>
-      <span style={{fontFamily: "monospace"}}>
+      <span style={{ fontFamily: 'monospace' }}>
         ${props.ast.procedure.value}
       </span>
       (<span>{props.args}</span>)
@@ -68,13 +72,13 @@ function FunctionEditor(props: FunctionEditorProps) {
 function MathEditor(props: MathEditorProps) {
   return (
     <>
-      {props.children.map(part => {
-        if (part.type === "ast") {
+      {props.children.map((part) => {
+        if (part.type === 'ast') {
           return part.editor;
-        } else if (part.type === "operator") {
+        } else if (part.type === 'operator') {
           return (
             <span>
-              <b>{part.operator === "*" ? "x" : part.operator}</b>
+              <b>{part.operator === '*' ? 'x' : part.operator}</b>
             </span>
           );
         }
@@ -87,9 +91,9 @@ export const MathTheme = {
   /*
     Base editors
   */
-  Base: props => props.editor,
-  RootNodeEditor: props => props.editor,
-  IDETextarea: props => <div />,
+  Base: (props) => props.editor,
+  RootNodeEditor: (props) => props.editor,
+  IDETextarea: (props) => <div />,
 
   /*
     Compound editors
@@ -114,5 +118,5 @@ export const MathTheme = {
   /*
     Math editors
   */
-  MathEditor
+  MathEditor,
 } as Theme;
