@@ -331,6 +331,13 @@ function VariableEditor({
   );
 }
 
+function JotaiAsHookForm(){
+
+  const [value,setValue] = useAtom(FormFieldAtom);
+  const register = useAtom(FormAtomForField);
+  return <input  {...register("stupid.key")} />
+}
+
 function ArrayUnaryEditor({
   children,
   addNew,

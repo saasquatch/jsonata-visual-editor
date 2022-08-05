@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import jsonata from "jsonata";
 
-import { createContainer } from "unstated-next";
-
 import {
   serializer,
   BinaryNode,
@@ -43,21 +41,20 @@ export { SchemaProvider };
 export const Consts = _consts;
 export const PathSuggester = _paths;
 
-function useEditorContext(initialState: Container | undefined): Container {
-  if (initialState === undefined) {
-    throw new Error("initialState is required!");
-  }
-  const {
-    schemaProvider,
-    theme,
-    boundVariables,
-    defaultProvider
-  } = initialState;
+// function useEditorContext(initialState: Container | undefined): Container {
+//   if (initialState === undefined) {
+//     throw new Error("initialState is required!");
+//   }
+//   const {
+//     schemaProvider,
+//     theme,
+//     boundVariables,
+//     defaultProvider
+//   } = initialState;
 
-  return { schemaProvider, theme, boundVariables, defaultProvider };
-}
+//   return { schemaProvider, theme, boundVariables, defaultProvider };
+// }
 
-export const Context = createContainer(useEditorContext);
 
 // See all the AST types: https://github.com/mtiller/jsonata/blob/ts-2.0/src/parser/ast.ts
 // const NestedPathValue = jsonata(`$join(steps.value,".")`);

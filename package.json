@@ -5,45 +5,75 @@
   "keywords": [
     "jsonata"
   ],
-  "source": "src/AstEditor.tsx",
-  "main": "dist/AstEditor.js",
-  "types": "dist/AstEditor.d.ts",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "src"
   ],
-  "dependencies": {
-    "jsonata": "1.7.0",
-    "jsonata-ui-core": "^1.7.12",
-    "unstated-next": "1.1.0"
-  },
-  "peerDependencies": {
-    "react": ">=16.8.6"
-  },
-  "devDependencies": {
-    "@ant-design/icons": "2.1.1",
-    "@ant-design/icons-react": "2.0.1",
-    "@mrblenny/react-flow-chart": "0.0.8",
-    "@types/json-schema": "7.0.3",
-    "microbundle": "0.11.0",
-    "react": "16.8.6",
-    "react-bootstrap": "1.0.0-beta.14",
-    "react-dom": "16.8.6",
-    "react-scripts": "3.2.0",
-    "react-select": "3.0.8",
-    "styled-components": "4.4.0",
-    "typescript": "3.4.5"
+  "engines": {
+    "node": ">=10"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "microbundle -f cjs",
-    "dev": "microbundle watch",
-    "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject"
+    "start": "tsdx watch",
+    "build": "tsdx build",
+    "test": "tsdx test --passWithNoTests",
+    "lint": "tsdx lint",
+    "prepare": "tsdx build",
+    "size": "size-limit",
+    "analyze": "size-limit --why",
+    "storybook": "start-storybook -p 6006",
+    "build-storybook": "build-storybook"
   },
-  "browserslist": [
-    ">0.2%",
-    "not dead",
-    "not ie <= 11",
-    "not op_mini all"
-  ]
+  "peerDependencies": {
+    "react": ">=16"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "tsdx lint"
+    }
+  },
+  "prettier": {
+    "printWidth": 80,
+    "semi": true,
+    "singleQuote": true,
+    "trailingComma": "es5"
+  },
+  "module": "dist/jsonata-visual-editor.esm.js",
+  "size-limit": [
+    {
+      "path": "dist/jsonata-visual-editor.cjs.production.min.js",
+      "limit": "10 KB"
+    },
+    {
+      "path": "dist/jsonata-visual-editor.esm.js",
+      "limit": "10 KB"
+    }
+  ],
+  "devDependencies": {
+    "@babel/core": "^7.17.9",
+    "@size-limit/preset-small-lib": "^7.0.8",
+    "@storybook/addon-essentials": "^6.4.20",
+    "@storybook/addon-info": "^5.3.21",
+    "@storybook/addon-links": "^6.4.20",
+    "@storybook/addons": "^6.4.20",
+    "@storybook/react": "^6.4.20",
+    "@types/react": "^17.0.43",
+    "@types/react-dom": "^17.0.14",
+    "babel-loader": "^8.2.4",
+    "husky": "^7.0.4",
+    "react": "^18.0.0",
+    "react-bootstrap": "^2.2.3",
+    "react-dom": "^18.0.0",
+    "react-is": "^18.0.0",
+    "size-limit": "^7.0.8",
+    "tsdx": "^0.14.1",
+    "tslib": "^2.3.1",
+    "typescript": "^4.6.3"
+  },
+  "dependencies": {
+    "jsonata": "^1.8.6",
+    "jsonata-ui-core": "^1.7.12"
+  }
 }
