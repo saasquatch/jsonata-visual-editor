@@ -3,7 +3,7 @@ import { ConditionNode, serializer } from 'jsonata-ui-core';
 import React, { useState } from 'react';
 import { Badge, Button, Col } from 'react-bootstrap';
 import { Editor } from './AstEditor';
-import { defaultIsValidBasicExpression } from './defaultIsValidBasicExpression';
+import { defaultIsValidBasicExpression } from './util/defaultIsValidBasicExpression';
 import PurchaseEvent from './example/PurchaseEvent.schema';
 import { makeSchemaProvider } from './schema/SchemaProvider';
 import { DefaultTheme } from './theme/DefaultTheme';
@@ -12,6 +12,9 @@ import { AST } from './types';
 export default {
   title: 'AST Editor',
 };
+
+export const Foo = () => <div>I am foo</div>;
+
 // @ts-ignore
 const schemaProvider = makeSchemaProvider(PurchaseEvent);
 

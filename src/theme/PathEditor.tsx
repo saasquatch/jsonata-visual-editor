@@ -24,7 +24,7 @@ type Option =
     };
 
 type CustomOptionProps = React.ComponentProps<typeof defaultComponents.Option>;
-type CustomValueProps = React.ComponentProps<typeof defaultComponents.Value>;
+type CustomValueProps = {};
 
 const CustomOption = (props: CustomOptionProps) => {
   const option = props.data as Option;

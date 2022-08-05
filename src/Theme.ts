@@ -1,25 +1,24 @@
-import React from "react";
 import {
+  ApplyNode,
+  ArrayUnaryNode,
   BinaryNode,
-  PathNode,
-  LiteralNode,
+  BindNode,
   BlockNode,
   ConditionNode,
-  VariableNode,
-  ObjectUnaryNode,
-  ArrayUnaryNode,
   FunctionNode,
-  ApplyNode,
-  BindNode
-} from "jsonata-ui-core";
+  LiteralNode,
+  ObjectUnaryNode,
+  PathNode,
+  VariableNode,
+} from 'jsonata-ui-core';
+import React from 'react';
 import {
-  ParsingState,
-  Modes,
-  Mode,
   AST,
+  Mode,
   NodeEditorProps,
-  SchemaProvider
-} from "./types";
+  ParsingState,
+  SchemaProvider,
+} from './types';
 
 type Callback = () => void;
 type OnChange<T> = (val: T) => void;
@@ -66,8 +65,8 @@ export interface IDETextareaProps {
 
 export type ChildNodeProps = {
   editor: JSX.Element;
-  ast: NodeEditorProps<AST>["ast"];
-  onChange: NodeEditorProps<AST>["onChange"];
+  ast: NodeEditorProps<AST>['ast'];
+  onChange: NodeEditorProps<AST>['onChange'];
 };
 
 export type CombinerEditorProps = NodeEditorProps<BinaryNode> & {
@@ -136,8 +135,8 @@ export type ConditionEditorProps = NodeEditorProps<ConditionNode> & {
     Then: JSX.Element;
     Condition: JSX.Element;
     remove: Callback;
-    ast: NodeEditorProps<ConditionNode>["ast"];
-    onChange: NodeEditorProps<ConditionNode>["onChange"];
+    ast: NodeEditorProps<ConditionNode>['ast'];
+    onChange: NodeEditorProps<ConditionNode>['onChange'];
   }[];
 };
 
@@ -146,7 +145,7 @@ export type ComparisonEditorProps = NodeEditorProps<BinaryNode> & {
   rhs: JSX.Element;
   lhsProps: NodeEditorProps<AST>;
   rhsProps: NodeEditorProps<AST>;
-  changeOperator: OnChange<BinaryNode["value"]>;
+  changeOperator: OnChange<BinaryNode['value']>;
 };
 
 export type ApplyEditorProps = NodeEditorProps<ApplyNode> & {
@@ -159,7 +158,7 @@ export type ApplyEditorProps = NodeEditorProps<ApplyNode> & {
 export type FunctionEditorProps = NodeEditorProps<FunctionNode> & {
   args: Children;
   argumentNodes: ChildNodeProps[];
-  changeProcedure: OnChange<String>;
+  changeProcedure: OnChange<string>;
 };
 
 export type BindEditorProps = NodeEditorProps<BindNode> & {
@@ -176,9 +175,9 @@ export type MathEditorProps = NodeEditorProps<BinaryNode> & {
 } & IDETextareaProps;
 
 export type MathPart =
-  | ({ type: "ast", children?: MathPart[] } & ChildNodeProps)
+  | ({ type: 'ast'; children?: MathPart[] } & ChildNodeProps)
   | {
-      type: "operator";
+      type: 'operator';
       operator: string;
       onChangeOperator: OnChange<string>;
     };

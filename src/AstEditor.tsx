@@ -30,13 +30,14 @@ import { StandardDefaultProvider } from './util/DefaultProvider';
 import _paths from './schema/PathSuggester';
 import * as SchemaProvider from './schema/SchemaProvider';
 import { MathPart } from './Theme';
+import { DefaultTheme } from './theme/DefaultTheme';
 import * as Types from './types';
+import { autoCoerce, toEditableText } from './util/autoCoerce';
 import { defaultIsValidBasicExpression } from './util/defaultIsValidBasicExpression';
-import { isMathNode } from './util/isNode';
-import { withoutIndex } from './util/withoutIndex';
 import { flattenConditions, FlattenerProps } from './util/flattenConditions';
+import { isMathNode } from './util/isNode';
 import { nextAst } from './util/nextAst';
-import { toEditableText, autoCoerce } from './util/autoCoerce';
+import { withoutIndex } from './util/withoutIndex';
 // re-export types for theming purposes
 export * from './Theme';
 export * from './types';
@@ -71,6 +72,15 @@ type State =
 // }
 // See all the AST types: https://github.com/mtiller/jsonata/blob/ts-2.0/src/parser/ast.ts
 // const NestedPathValue = jsonata(`$join(steps.value,".")`);
+
+export function useContainer() {
+  return {
+    theme: DefaultTheme,
+    defaultProvider: StandardDefaultProvider,
+    schemaProvider: undefined as Types.SchemaProvider | undefined,
+    boundVariables: [],
+  };
+}
 
 export function Editor(props: Types.EditorProps) {
   const { isValidBasicExpression = defaultIsValidBasicExpression, text } =
@@ -147,20 +157,14 @@ export function Editor(props: Types.EditorProps) {
     );
 
   return (
-    <Context.Provider
-      initialState={{
-        schemaProvider: provider,
-        theme,
-        defaultProvider: defaults,
-      }}
-    >
+    <>
       <theme.Base
         editor={editor}
         toggleMode={toggleMode}
         toggleBlock={toggleBlock}
         mode={mode}
       />
-    </Context.Provider>
+    </>
   );
 }
 
@@ -234,7 +238,7 @@ export function IDEEditor({
   setToggleBlock,
   isValidBasicExpression,
 }: IDEEditorProps): JSX.Element {
-  const { theme } = Context.useContainer();
+  const { theme } = useContainer();
   const [parsing, setParsing] = useState<ParsingState>({
     inProgress: false,
     error: '',
@@ -264,7 +268,7 @@ export function IDEEditor({
       //   await validator(newAst);
       // }
     } catch (e) {
-      error = 'Parsing Error: ' + e.message;
+      error = `Parsing Error: ${e}`;
       setParsing({
         inProgress: false,
         error: error,
@@ -294,7 +298,7 @@ export function IDEEditor({
 function RootNodeEditor(
   props: NodeEditorProps<AST>
 ): React.ReactElement | null {
-  const { theme } = Context.useContainer();
+  const { theme } = useContainer();
   const editor = <NodeEditor {...props} />;
   return <theme.RootNodeEditor {...props} editor={editor} />;
 }
@@ -317,7 +321,7 @@ function BinaryEditor(
 function ComparisonEditor(
   props: NodeEditorProps<BinaryNode>
 ): React.ReactElement | null {
-  const { theme } = Context.useContainer();
+  const { theme } = useContainer();
 
   const swap = props.ast.value === 'in';
   const leftKey = !swap ? 'lhs' : 'rhs';
@@ -424,7 +428,7 @@ function buildFlattenedBinaryValueSwap({
 type CombinerProps = NodeEditorProps<BinaryNode>;
 
 function CombinerEditor(props: CombinerProps): JSX.Element {
-  const { theme, defaultProvider } = Context.useContainer();
+  const { theme, defaultProvider } = useContainer();
   const flattenedBinaryNodes = flattenBinaryNodesThatMatch({
     ast: props.ast,
     onChange: props.onChange,
@@ -476,7 +480,7 @@ function PathEditor({
   validator,
   cols = '5',
 }: NodeEditorProps<PathNode>): JSX.Element {
-  const { theme, schemaProvider, defaultProvider } = Context.useContainer();
+  const { theme, schemaProvider, defaultProvider } = useContainer();
   const changeType = () => onChange(nextAst(ast, defaultProvider));
 
   return (
@@ -496,7 +500,7 @@ function CoercibleValueEditor({
   validator,
   cols = '5',
 }: NodeEditorProps<LiteralNode>): JSX.Element {
-  const { theme, defaultProvider } = Context.useContainer();
+  const { theme, defaultProvider } = useContainer();
   const changeType = () => onChange(nextAst(ast, defaultProvider));
   // let error = validator && validator(ast);
   const text = toEditableText(ast);
@@ -517,10 +521,10 @@ function BlockEditor({
   ast,
   onChange,
 }: NodeEditorProps<BlockNode>): JSX.Element {
-  const { theme } = Context.useContainer();
+  const { theme } = useContainer();
 
   const childNodes = ast.expressions.map((exp: AST, idx: number) => {
-    const changeExpr = (newAst) => {
+    const changeExpr = (newAst: AST) => {
       const newExpressions: AST[] = [...ast.expressions];
       newExpressions[idx] = newAst;
       const newBlock: BlockNode = {
@@ -553,7 +557,7 @@ function VariableEditor({
   onChange,
   cols = '5',
 }: NodeEditorProps<VariableNode>): JSX.Element {
-  const { theme, boundVariables = [] } = Context.useContainer();
+  const { theme, boundVariables = [] } = useContainer();
   return (
     <theme.VariableEditor
       ast={ast}
@@ -568,7 +572,7 @@ function ConditionEditor({
   ast,
   onChange,
 }: NodeEditorProps<ConditionNode>): JSX.Element {
-  const { theme, defaultProvider } = Context.useContainer();
+  const { theme, defaultProvider } = useContainer();
 
   const flattened = flattenConditions({ ast, onChange });
   const { pairs } = flattened;
@@ -608,7 +612,7 @@ function ConditionEditor({
   };
 
   const removeAst = (ast: ConditionNode, onChange: OnChange) =>
-    ast.else ? onChange(ast.else) : onChange(null);
+    ast.else ? onChange(ast.else) : null;
 
   const children = flattened.pairs.map((pair) => {
     const Then = <NodeEditor {...pair.then} cols="12" />;
@@ -649,12 +653,11 @@ function ConditionEditor({
 }
 
 function BindEditor({ ast, onChange }: NodeEditorProps<BindNode>): JSX.Element {
-  const { theme } = Context.useContainer();
+  const { theme } = useContainer();
 
   const lhsProps = {
     ast: ast.lhs,
-    onChange: (newAst: VariableNode) =>
-      onChange({ ...ast, lhs: newAst } as BindNode),
+    onChange: (newAst: AST) => onChange({ ...ast, lhs: newAst } as BindNode),
   };
   const rhsProps = {
     ast: ast.rhs,
@@ -679,7 +682,7 @@ function ObjectUnaryEditor({
   ast,
   onChange,
 }: NodeEditorProps<ObjectUnaryNode>): JSX.Element {
-  const { theme, defaultProvider } = Context.useContainer();
+  const { theme, defaultProvider } = useContainer();
 
   const removeLast = () => {
     onChange({
@@ -714,8 +717,8 @@ function ObjectUnaryEditor({
         lhs: newLhs,
       } as AST);
     };
-    const changeKey = (newAst) => changePair(newAst, 0);
-    const changeValue = (newAst) => changePair(newAst, 1);
+    const changeKey = (newAst: AST) => changePair(newAst, 0);
+    const changeValue = (newAst: AST) => changePair(newAst, 1);
     const keyProps = {
       ast: pair[0],
       onChange: changeKey,
@@ -745,7 +748,7 @@ function ArrayUnaryEditor({
   ast,
   onChange,
 }: NodeEditorProps<ArrayUnaryNode>): JSX.Element {
-  const { theme, defaultProvider } = Context.useContainer();
+  const { theme, defaultProvider } = useContainer();
 
   const removeLast = () => {
     onChange({
@@ -797,7 +800,7 @@ function ArrayUnaryEditor({
 }
 
 function ApplyEditor(props: NodeEditorProps<ApplyNode>): JSX.Element {
-  const { theme } = Context.useContainer();
+  const { theme } = useContainer();
   const { baseLeft, chain } = flattenApply(props.ast, props.onChange);
   const lhs = <NodeEditor {...baseLeft} />;
   const childNodes = chain.map((c) => ({
@@ -873,7 +876,7 @@ function FunctionEditor({
   ast,
   onChange,
 }: NodeEditorProps<FunctionNode>): JSX.Element {
-  const { theme } = Context.useContainer();
+  const { theme } = useContainer();
   const argumentNodes = ast.arguments.map((a, idx) => {
     const changeArg = (newAst: AST) => {
       const newArgs: AST[] = [...ast.arguments];
@@ -911,7 +914,7 @@ function FunctionEditor({
 }
 
 function MathEditor(props: NodeEditorProps<BinaryNode>): JSX.Element {
-  const { theme, defaultProvider } = Context.useContainer();
+  const { theme, defaultProvider } = useContainer();
   const [text, setText] = useState(serializer(props.ast));
   const [parsing, setParsing] = useState<ParsingState>({
     inProgress: false,

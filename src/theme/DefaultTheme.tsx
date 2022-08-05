@@ -1,82 +1,34 @@
-import React, { FormEvent, ElementType, useState, useEffect, useRef } from "react";
 import {
-  AntDesignOutline,
-  DashboardOutline,
-  FontSizeOutline,
-  NumberOutline,
-  TableOutline,
-  CloseCircleOutline,
-  CheckSquareOutline,
-  PlusOutline
+  AntDesignOutlined, CheckSquareOutlined, CloseCircleOutlined, DashboardOutlined,
+  FontSizeOutlined,
+  NumberOutlined, PlusOutlined, TableOutlined
 } from "@ant-design/icons";
 import AntdIcon from "@ant-design/icons-react";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  InputGroup,
-  Form,
-  Col,
   Button,
-  ButtonGroup,
-  OverlayTrigger,
+  ButtonGroup, Col, Form, InputGroup, OverlayTrigger,
   Table,
-  Tooltip,
-  FormControl,
-  FormControlProps,
-  Badge
+  Tooltip
 } from "react-bootstrap";
 import styled from "styled-components";
 
-import ButtonHelp from "./ButtonHelp";
-import PathPicker from "./PathEditor";
 import {
-  serializer,
-  BinaryNode,
-  PathNode,
-  LiteralNode,
-  BlockNode,
-  ConditionNode,
-  VariableNode,
-  ObjectUnaryNode,
-  ArrayUnaryNode,
-  FunctionNode,
-  ApplyNode,
-  BindNode
+  BinaryNode, LiteralNode, PathNode
 } from "jsonata-ui-core";
+import { useContainer } from "../AstEditor";
 import {
-  ParsingState,
-  Modes,
-  Mode,
-  AST,
-  NodeEditorProps,
-  SchemaProvider
-} from "../types";
-import {
-  baseOperators,
-  numberOperators,
-  arrayOperators,
-  mathOperators
+  arrayOperators, baseOperators,
+  numberOperators
 } from "../Consts";
 import {
-  IDETextareaProps,
-  CombinerEditorProps,
-  ConditionEditorProps,
-  ComparisonEditorProps,
-  BlockEditorProps,
-  ObjectUnaryEditorProps,
-  VariableEditorProps,
-  ArrayUnaryEditorProps,
-  LeafValueEditorProps,
-  PathEditorProps,
-  BaseEditorProps,
-  RootNodeEditorProps,
-  ApplyEditorProps,
-  FunctionEditorProps,
-  BindEditorProps,
-  MathEditorProps,
-  MathPart
+  ApplyEditorProps, ArrayUnaryEditorProps, BaseEditorProps, BindEditorProps, BlockEditorProps, CombinerEditorProps, ComparisonEditorProps, ConditionEditorProps, FunctionEditorProps, IDETextareaProps, LeafValueEditorProps, MathEditorProps, ObjectUnaryEditorProps, PathEditorProps, RootNodeEditorProps, VariableEditorProps
 } from "../Theme";
-import { Context } from "../AstEditor";
-import { MathTheme } from "./DefaultMathTheme";
-import { ReplaceProps, BsPrefixProps } from "react-bootstrap/helpers";
+import {
+  AST, Modes, NodeEditorProps
+} from "../types";
+import ButtonHelp from "./ButtonHelp";
+import PathPicker from "./PathEditor";
 
 // import { Theme, Icons } from "./Theme";
 type Callback = () => void;
@@ -96,19 +48,19 @@ const GrowDiv = styled.div`
 `;
 
 AntdIcon.add(
-  AntDesignOutline,
-  DashboardOutline,
-  FontSizeOutline,
-  NumberOutline,
-  CloseCircleOutline,
-  PlusOutline
+  AntDesignOutlined,
+  DashboardOutlined,
+  FontSizeOutlined,
+  NumberOutlined,
+  CloseCircleOutlined,
+  PlusOutlined
 );
 const IconMap = {
-  number: NumberOutline,
-  string: FontSizeOutline,
-  path: TableOutline,
-  value: CheckSquareOutline,
-  binary: PlusOutline
+  number: NumberOutlined,
+  string: FontSizeOutlined,
+  path: TableOutlined,
+  value: CheckSquareOutlined,
+  binary: PlusOutlined
 };
 
 function Icon(props: { type: string }) {
@@ -331,13 +283,6 @@ function VariableEditor({
   );
 }
 
-function JotaiAsHookForm(){
-
-  const [value,setValue] = useAtom(FormFieldAtom);
-  const register = useAtom(FormAtomForField);
-  return <input  {...register("stupid.key")} />
-}
-
 function ArrayUnaryEditor({
   children,
   addNew,
@@ -512,7 +457,7 @@ function ApplyEditor({ lhs, children, ast }: ApplyEditorProps) {
             <tr>
               {children.map(c => (
                 <>
-                  <td>~></td>
+                  <td>{"~>"}</td>
                   <td>{c}</td>
                 </>
               ))}
@@ -592,7 +537,7 @@ function MathEditor({
   onChange,
   cols = "5"
 }: MathEditorProps) {
-  const context = Context.useContainer();
+  const context = useContainer();
   const [isEditing, setIsEditing] = useState(false);
   const originalText = useRef(text);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -631,7 +576,7 @@ function MathEditor({
           type="text"
           placeholder="Enter a math expression"
           value={text}
-          onChange={e => textChange(e.target.value)}
+          onChange={e => textChange((e.target as HTMLInputElement).value)}
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
           isInvalid={!!parsing.error}
@@ -649,10 +594,7 @@ function MathEditor({
           onClick={() => setIsEditing(true)}
           style={{userSelect: "none"}}
         >
-          <Context.Provider initialState={{
-            ...context,
-            theme: MathTheme
-          }}>
+          <>
             {children.map(part => {
               if (part.type === "ast") {
                 return part.editor;
@@ -660,7 +602,7 @@ function MathEditor({
                 return <span><b>{part.operator === "*" ? "x" : part.operator}</b></span>
               }
             })}
-          </Context.Provider>
+          </>
         </Math>
         <TypeSwitch ast={ast} onChange={onChange} changeType={changeType} />
       </InputGroup>
