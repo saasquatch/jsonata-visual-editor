@@ -19,7 +19,7 @@ import {
   AST,
   NodeEditorProps,
   SchemaProvider
-} from "./Types";
+} from "./types";
 
 type Callback = () => void;
 type OnChange<T> = (val: T) => void;

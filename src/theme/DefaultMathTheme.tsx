@@ -3,7 +3,7 @@ import styled from "styled-components";
 import { Badge } from "react-bootstrap";
 
 import { serializer } from "jsonata-ui-core";
-import { AST, NodeEditorProps } from "../Types";
+import { AST, NodeEditorProps } from "../types";
 import {
   Theme,
   VariableEditorProps,

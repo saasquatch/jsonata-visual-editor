@@ -48,7 +48,7 @@ import {
   AST,
   NodeEditorProps,
   SchemaProvider
-} from "../Types";
+} from "../types";
 import {
   baseOperators,
   numberOperators,

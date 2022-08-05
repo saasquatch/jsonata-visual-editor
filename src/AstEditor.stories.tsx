@@ -2,11 +2,12 @@ import jsonata from 'jsonata';
 import { ConditionNode, serializer } from 'jsonata-ui-core';
 import React, { useState } from 'react';
 import { Badge, Button, Col } from 'react-bootstrap';
-import { defaultIsValidBasicExpression, Editor } from './AstEditor';
+import { Editor } from './AstEditor';
+import { defaultIsValidBasicExpression } from './defaultIsValidBasicExpression';
 import PurchaseEvent from './example/PurchaseEvent.schema';
 import { makeSchemaProvider } from './schema/SchemaProvider';
 import { DefaultTheme } from './theme/DefaultTheme';
-import { AST } from './Types';
+import { AST } from './types';
 
 export default {
   title: 'AST Editor',
