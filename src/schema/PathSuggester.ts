@@ -105,15 +105,21 @@ function getPaths(schema: JsonSchema, parentOpts: ParentOpts = {}): Path[] {
   } else if (Array.isArray(type)) {
     paths = [
       ...paths,
-      ...(type as JSONSchema4TypeName[]).map((singleType) => ({
-        path: pfixed(),
-        title: schema.title,
-        description: schema.description,
-        type: singleType as PrimitiveType,
-        titlePath: [...titlePath, schema.title],
-        typePath: [...typePath, singleType],
-        isJsonataSequence,
-      })),
+      ...(type as JSONSchema4TypeName[]).reduce((acc, singleType) => {
+        if (singleType === "null") return acc;
+        return [
+          ...acc,
+          {
+            path: pfixed(),
+            title: schema.title,
+            description: schema.description,
+            type: singleType as PrimitiveType,
+            titlePath: [...titlePath, schema.title],
+            typePath: [...typePath, singleType],
+            isJsonataSequence,
+          },
+        ];
+      }, []),
     ];
   }
   return paths;
