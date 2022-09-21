@@ -6,7 +6,7 @@ export default {
   type: "object",
   properties: {
     checkout_id: {
-      type: "string",
+      type: ["string", null],
       title: "Checkout ID",
       description: "The checkout ID associated with this purchase",
       maxLength: 375
