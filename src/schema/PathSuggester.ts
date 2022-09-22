@@ -1,4 +1,5 @@
 import { JSONSchema4, JSONSchema4TypeName } from "json-schema";
+import { escapeString } from "jsonata-ui-core";
 
 type JsonSchema = JSONSchema4;
 type TypeName = JSONSchema4TypeName;
@@ -32,7 +33,7 @@ function getPaths(schema: JsonSchema, parentOpts: ParentOpts = {}): Path[] {
   } = parentOpts;
   const pfixed = (k?: string) => {
     if (!k) return pathPrefix;
-    return pathPrefix ? pathPrefix + "." + k : k;
+    return pathPrefix ? pathPrefix + "." + escapeString(k) : escapeString(k);
   };
 
   function ChildPathReducer(acc: Path[], s: JsonSchema): Path[] {
@@ -101,6 +102,25 @@ function getPaths(schema: JsonSchema, parentOpts: ParentOpts = {}): Path[] {
       isJsonataSequence,
     };
     paths = [...paths, path];
+  } else if (Array.isArray(type)) {
+    paths = [
+      ...paths,
+      ...(type as JSONSchema4TypeName[]).reduce((acc, singleType) => {
+        if (singleType === "null") return acc;
+        return [
+          ...acc,
+          {
+            path: pfixed(),
+            title: schema.title,
+            description: schema.description,
+            type: singleType as PrimitiveType,
+            titlePath: [...titlePath, schema.title],
+            typePath: [...typePath, singleType],
+            isJsonataSequence,
+          },
+        ];
+      }, []),
+    ];
   }
   return paths;
 }
