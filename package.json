@@ -24,11 +24,11 @@
     "@ant-design/icons-react": "2.0.1",
     "@mrblenny/react-flow-chart": "0.0.8",
     "@types/json-schema": "7.0.3",
-    "microbundle": "0.11.0",
+    "microbundle": "0.15.1",
     "react": "16.8.6",
     "react-bootstrap": "1.0.0-beta.14",
     "react-dom": "16.8.6",
-    "react-scripts": "3.2.0",
+    "react-scripts": "5.0.1",
     "react-select": "3.0.8",
     "styled-components": "4.4.0",
     "typescript": "3.4.5"
