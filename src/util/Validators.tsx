@@ -1,5 +1,5 @@
 import { SchemaProvider, ValidatorError, AST } from "../Types";
-import { isPathNode, isNumberNode } from "../AstEditor";
+import { isPathNode, isNumberNode } from "./isNode";
 
 export function Validators(schemaProvider: SchemaProvider) {
   return {

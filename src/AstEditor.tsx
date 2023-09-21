@@ -1,40 +1,40 @@
-import React, { useState, useEffect } from "react";
 import jsonata from "jsonata";
-
-import { createContainer } from "unstated-next";
+import React, { useState, type ReactNode } from "react";
 
 import {
-  serializer,
+  ApplyNode,
+  ArrayUnaryNode,
   BinaryNode,
-  PathNode,
-  LiteralNode,
+  BindNode,
   BlockNode,
   ConditionNode,
-  VariableNode,
-  ObjectUnaryNode,
-  ArrayUnaryNode,
-  ApplyNode,
   FunctionNode,
-  BindNode,
-  NameNode
+  LiteralNode,
+  ObjectUnaryNode,
+  PathNode,
+  VariableNode,
+  serializer,
 } from "jsonata-ui-core";
+import * as _consts from "./Consts";
 import {
-  ParsingState,
-  NodeEditorProps,
+  AST,
+  Container,
   DefaultProvider,
   Mode,
   Modes,
+  NodeEditorProps,
   OnChange,
-  AST,
-  Container
+  ParsingState,
 } from "./Types";
-import * as _consts from "./Consts";
 import { StandardDefaultProvider } from "./util/DefaultProvider";
 
+import { MathPart } from "./Theme";
 import * as Types from "./Types";
-import { Theme, MathPart } from "./Theme";
 import _paths from "./schema/PathSuggester";
 import * as SchemaProvider from "./schema/SchemaProvider";
+import { fromEditableText, toEditableText } from "./util/autoCoerce";
+import { isMath } from "./util/isNode";
+import { useUpDownEffect } from "./util/useUpDownEffect";
 // re-export types for theming purposes
 export * from "./Theme";
 export * from "./Types";
@@ -47,24 +47,15 @@ function useEditorContext(initialState: Container | undefined): Container {
   if (initialState === undefined) {
     throw new Error("initialState is required!");
   }
-  const {
-    schemaProvider,
-    theme,
-    boundVariables,
-    defaultProvider
-  } = initialState;
+  const { schemaProvider, theme, boundVariables, defaultProvider } =
+    initialState;
 
   return { schemaProvider, theme, boundVariables, defaultProvider };
 }
 
+// TODO;
+declare const createContainer: any;
 export const Context = createContainer(useEditorContext);
-
-// See all the AST types: https://github.com/mtiller/jsonata/blob/ts-2.0/src/parser/ast.ts
-// const NestedPathValue = jsonata(`$join(steps.value,".")`);
-
-export const isNumberNode = (n: AST) => n.type === "number";
-export const isPathNode = (n: AST) => n.type === "path";
-export const isMath = (n: AST): n is BinaryNode => n.type === "binary" && Object.keys(Consts.mathOperators).includes(n.value);
 
 type State =
   | {
@@ -79,19 +70,20 @@ type State =
     };
 
 export function Editor(props: Types.EditorProps) {
-  const { isValidBasicExpression = defaultIsValidBasicExpression, text } = props;
+  const { isValidBasicExpression = defaultIsValidBasicExpression, text } =
+    props;
   const initialState = (): State => {
     try {
       let newAst = jsonata(props.text).ast() as AST;
       const toggleBlock = isValidBasicExpression(newAst);
       return {
         toggleBlock,
-        mode: (toggleBlock === null ? Modes.NodeMode : Modes.IDEMode) as Mode
+        mode: (toggleBlock === null ? Modes.NodeMode : Modes.IDEMode) as Mode,
       } as State;
     } catch (e) {
       return {
         toggleBlock: "Parsing error with expression",
-        mode: "IDEMode"
+        mode: "IDEMode",
       } as State;
     }
   };
@@ -106,7 +98,7 @@ export function Editor(props: Types.EditorProps) {
     if (state.mode === Modes.NodeMode) {
       setState({
         ...state,
-        mode: "IDEMode"
+        mode: "IDEMode",
       });
     } else {
       // TODO: Need AST from IDE
@@ -114,7 +106,7 @@ export function Editor(props: Types.EditorProps) {
       setState({
         ...state,
         ast: ast,
-        mode: "NodeMode"
+        mode: "NodeMode",
       });
     }
   }
@@ -122,7 +114,7 @@ export function Editor(props: Types.EditorProps) {
   const { schema, schemaProvider, theme, defaultProvider = {} } = props;
   const defaults: DefaultProvider = {
     ...StandardDefaultProvider,
-    ...defaultProvider
+    ...defaultProvider,
   };
   const provider = schema
     ? SchemaProvider.makeSchemaProvider(schema)
@@ -135,7 +127,7 @@ export function Editor(props: Types.EditorProps) {
   const setToggleBlock = (text: string | null) => {
     setState({
       ...state,
-      toggleBlock: text
+      toggleBlock: text,
     });
   };
   const { toggleBlock, mode } = state;
@@ -156,7 +148,7 @@ export function Editor(props: Types.EditorProps) {
       initialState={{
         schemaProvider: provider,
         theme,
-        defaultProvider: defaults
+        defaultProvider: defaults,
       }}
     >
       <theme.Base
@@ -170,18 +162,20 @@ export function Editor(props: Types.EditorProps) {
 }
 
 export function defaultIsValidBasicExpression(ast: AST): string | null {
-  const advancedOnly = jsonata(`**[type = "block" or type = "lambda" or type = "transform" or (type = "binary" and value = "&")]`);
+  const advancedOnly = jsonata(
+    `**[type = "block" or type = "lambda" or type = "transform" or (type = "binary" and value = "&")]`
+  );
   try {
-    if(advancedOnly.evaluate(ast)) {
+    if (advancedOnly.evaluate(ast)) {
       return "Can't use basic editor for advanced expressions. Try a simpler expression.";
-    } 
+    }
   } catch (e) {
     return "Failed to evaluate expression";
   }
-  return null;;
+  return null;
 }
 
-function NodeEditor(props: NodeEditorProps<AST>): JSX.Element {
+function NodeEditor(props: NodeEditorProps<AST>): ReactNode {
   const { ast, ...rest } = props;
   if (ast.type === "binary") {
     return <BinaryEditor {...rest} ast={ast} />;
@@ -214,31 +208,6 @@ function NodeEditor(props: NodeEditorProps<AST>): JSX.Element {
   }
 }
 
-/**
- *
- * @param value the prop value
- * @param onChange the onChange callback
- * @param effect the effect to call when the downward value changes
- */
-function useUpDownEffect<T>(
-  value: T,
-  onChange: (v: T) => void,
-  effect: React.EffectCallback
-) {
-  const [upwardValue, setUpward] = useState<T | null>(null);
-  useEffect(() => {
-    if (value !== upwardValue) {
-      setUpward(value);
-      effect();
-    }
-  }, [value]);
-  const upWardChange = (up: T) => {
-    setUpward(up);
-    onChange(up);
-  };
-  return [upWardChange];
-}
-
 type IDEEditorProps = {
   text: string;
   onChange: (text: string) => void;
@@ -249,12 +218,12 @@ export function IDEEditor({
   text,
   onChange,
   setToggleBlock,
-  isValidBasicExpression
-}: IDEEditorProps): JSX.Element {
+  isValidBasicExpression,
+}: IDEEditorProps): ReactNode {
   const { theme } = Context.useContainer();
   const [parsing, setParsing] = useState<ParsingState>({
     inProgress: false,
-    error: ""
+    error: "",
   });
 
   const [onChangeMemo] = useUpDownEffect(text, onChange, doParsing);
@@ -271,7 +240,7 @@ export function IDEEditor({
     // Start parsing asynchronously
     setParsing({
       inProgress: true,
-      error: undefined
+      error: undefined,
     });
     let newAst: AST;
     let error = undefined;
@@ -284,14 +253,14 @@ export function IDEEditor({
       error = "Parsing Error: " + e.message;
       setParsing({
         inProgress: false,
-        error: error
+        error: error,
       });
       setError && setError(error);
       return;
     }
     setParsing({
       inProgress: false,
-      error: error
+      error: error,
     });
     setError && setError(undefined);
     onChangeAst(newAst);
@@ -308,7 +277,7 @@ export function IDEEditor({
   );
 }
 
-function RootNodeEditor(props: NodeEditorProps<AST>): JSX.Element {
+function RootNodeEditor(props: NodeEditorProps<AST>): ReactNode {
   const { theme } = Context.useContainer();
   const editor = <NodeEditor {...props} />;
   return <theme.RootNodeEditor {...props} editor={editor} />;
@@ -326,7 +295,7 @@ function BinaryEditor(props: NodeEditorProps<BinaryNode>) {
   }
 }
 
-function ComparisonEditor(props: NodeEditorProps<BinaryNode>): JSX.Element {
+function ComparisonEditor(props: NodeEditorProps<BinaryNode>): ReactNode {
   const { theme } = Context.useContainer();
 
   const swap = props.ast.value === "in";
@@ -349,25 +318,17 @@ function ComparisonEditor(props: NodeEditorProps<BinaryNode>): JSX.Element {
     }
   };
   const lhsProps = {
-    ast:props.ast[leftKey],
+    ast: props.ast[leftKey],
     onChange: (newAst: AST) =>
-      props.onChange({ ...props.ast, [leftKey]: newAst })
-  }
+      props.onChange({ ...props.ast, [leftKey]: newAst }),
+  };
   const rhsProps = {
-    ast:props.ast[rightKey],
+    ast: props.ast[rightKey],
     onChange: (newAst: AST) =>
-      props.onChange({ ...props.ast, [rightKey]: newAst })
-  }
-  const lhs = (
-    <NodeEditor
-      {...lhsProps}
-    />
-  );
-  const rhs = (
-    <NodeEditor
-     {...rhsProps}
-    />
-  );
+      props.onChange({ ...props.ast, [rightKey]: newAst }),
+  };
+  const lhs = <NodeEditor {...lhsProps} />;
+  const rhs = <NodeEditor {...rhsProps} />;
   return (
     <theme.ComparisonEditor
       ast={props.ast}
@@ -384,7 +345,7 @@ function ComparisonEditor(props: NodeEditorProps<BinaryNode>): JSX.Element {
 function flattenBinaryNodesThatMatch({
   ast,
   onChange,
-  parentType
+  parentType,
 }: {
   ast: AST;
   onChange: OnChange;
@@ -395,14 +356,14 @@ function flattenBinaryNodesThatMatch({
     return [
       ...flattenBinaryNodesThatMatch({
         ast: ast.lhs,
-        onChange: newAst => onChange({ ...ast, lhs: newAst }),
-        parentType
+        onChange: (newAst) => onChange({ ...ast, lhs: newAst }),
+        parentType,
       }),
       ...flattenBinaryNodesThatMatch({
         ast: ast.rhs,
-        onChange: newAst => onChange({ ...ast, rhs: newAst }),
-        parentType
-      })
+        onChange: (newAst) => onChange({ ...ast, rhs: newAst }),
+        parentType,
+      }),
     ];
   } else {
     // Don't flatten
@@ -413,7 +374,7 @@ function flattenBinaryNodesThatMatch({
 function buildFlattenedBinaryValueSwap({
   ast,
   parentType,
-  newValue
+  newValue,
 }: {
   ast: AST;
   parentType: String;
@@ -425,14 +386,14 @@ function buildFlattenedBinaryValueSwap({
       lhs: buildFlattenedBinaryValueSwap({
         ast: ast.lhs,
         parentType,
-        newValue
+        newValue,
       }),
       rhs: buildFlattenedBinaryValueSwap({
         ast: ast.rhs,
         parentType,
-        newValue
+        newValue,
       }),
-      value: newValue
+      value: newValue,
     };
   } else {
     return ast;
@@ -441,12 +402,12 @@ function buildFlattenedBinaryValueSwap({
 
 type CombinerProps = NodeEditorProps<BinaryNode>;
 
-function CombinerEditor(props: CombinerProps): JSX.Element {
+function CombinerEditor(props: CombinerProps): ReactNode {
   const { theme, defaultProvider } = Context.useContainer();
   const flattenedBinaryNodes = flattenBinaryNodesThatMatch({
     ast: props.ast,
     onChange: props.onChange,
-    parentType: props.ast.value
+    parentType: props.ast.value,
   });
   const removeLast = () => props.onChange(props.ast.lhs);
   const addNew = () =>
@@ -455,7 +416,7 @@ function CombinerEditor(props: CombinerProps): JSX.Element {
       value: props.ast.value,
       lhs: props.ast,
       rhs: defaultProvider.defaultComparison(),
-      position: 0
+      position: 0,
     } as BinaryNode);
 
   const onChange = (val: AST) =>
@@ -464,16 +425,16 @@ function CombinerEditor(props: CombinerProps): JSX.Element {
         ast: props.ast,
         // @ts-ignore
         newValue: val,
-        parentType: props.ast.value
+        parentType: props.ast.value,
       })
     );
-  const childNodes = flattenedBinaryNodes.map(c => ({
+  const childNodes = flattenedBinaryNodes.map((c) => ({
     editor: <NodeEditor ast={c.ast} onChange={c.onChange} />,
     ast: c.ast,
-    onChange: c.onChange
+    onChange: c.onChange,
   }));
 
-  const children = childNodes.map(c => c.editor);
+  const children = childNodes.map((c) => c.editor);
 
   return (
     <theme.CombinerEditor
@@ -492,8 +453,8 @@ function PathEditor({
   ast,
   onChange,
   validator,
-  cols = "5"
-}: NodeEditorProps<PathNode>): JSX.Element {
+  cols = "5",
+}: NodeEditorProps<PathNode>): ReactNode {
   const { theme, schemaProvider, defaultProvider } = Context.useContainer();
   const changeType = () => onChange(nextAst(ast, defaultProvider));
 
@@ -516,9 +477,7 @@ function nextAst(ast: AST, defaults: DefaultProvider): AST {
       if (isMath(testAst)) {
         return testAst;
       }
-    } catch (e) {
-
-    }
+    } catch (e) {}
   }
 
   if (ast.type !== "path") {
@@ -539,68 +498,17 @@ function nextAst(ast: AST, defaults: DefaultProvider): AST {
   throw new Error("Unhandled AST type");
 }
 
-function isNumber(str: string): boolean {
-  if (typeof str !== "string") return false; // we only process strings!
-  // could also coerce to string: str = ""+str
-  // @ts-ignore -- expect error
-  return !isNaN(str) && !isNaN(parseFloat(str));
-}
-
-function autoCoerce(newValue: string): AST {
-  const cleanVal = newValue.trim().toLowerCase();
-  if (isNumber(newValue)) {
-    return {
-      type: "number",
-      value: parseFloat(newValue),
-      position: 0
-    };
-  } else if (["true", "false", "null"].includes(cleanVal)) {
-    let value: any;
-    if (cleanVal === "true") {
-      value = true;
-    } else if (cleanVal === "false") {
-      value = false;
-    } else if (cleanVal === "null") {
-      value = null;
-    } else {
-      console.error("Invalid value node" + newValue);
-      throw new Error("Unhandle value node" + newValue);
-    }
-    return {
-      type: "value",
-      value: value,
-      position: 0
-    };
-  }
-
-  return {
-    type: "string",
-    value: newValue,
-    position: 0
-  };
-}
-
-function toEditableText(ast: AST): string {
-  if (ast.type === "string") return ast.value;
-  if (ast.type === "number") return ast.value.toString();
-  if (ast.type === "value") {
-    if (ast.value === null) return "null";
-    if (ast.value === false) return "false";
-    if (ast.value === true) return "true";
-  }
-}
-
 function CoercibleValueEditor({
   ast,
   onChange,
   validator,
-  cols = "5"
-}: NodeEditorProps<LiteralNode>): JSX.Element {
+  cols = "5",
+}: NodeEditorProps<LiteralNode>): ReactNode {
   const { theme, defaultProvider } = Context.useContainer();
   const changeType = () => onChange(nextAst(ast, defaultProvider));
   // let error = validator && validator(ast);
   const text = toEditableText(ast);
-  const onChangeText = (newText: string) => onChange(autoCoerce(newText));
+  const onChangeText = (newText: string) => onChange(fromEditableText(newText));
   return (
     <theme.LeafValueEditor
       ast={ast}
@@ -613,30 +521,27 @@ function CoercibleValueEditor({
   );
 }
 
-function BlockEditor({
-  ast,
-  onChange
-}: NodeEditorProps<BlockNode>): JSX.Element {
+function BlockEditor({ ast, onChange }: NodeEditorProps<BlockNode>): ReactNode {
   const { theme } = Context.useContainer();
 
   const childNodes = ast.expressions.map((exp: AST, idx: number) => {
-    const changeExpr = newAst => {
+    const changeExpr = (newAst) => {
       const newExpressions: AST[] = [...ast.expressions];
       newExpressions[idx] = newAst;
       const newBlock: BlockNode = {
         ...ast,
         // @ts-ignore -- There's something weird going on with the array typing here. Likely caused by jsonata-ui-core?
-        expressions: newExpressions
+        expressions: newExpressions,
       };
       onChange(newBlock);
     };
     return {
       editor: <NodeEditor ast={exp} onChange={changeExpr} />,
       ast: exp,
-      onChange: changeExpr
+      onChange: changeExpr,
     };
   });
-  const children = childNodes.map(c=>c.editor);
+  const children = childNodes.map((c) => c.editor);
 
   return (
     <theme.BlockEditor
@@ -671,44 +576,43 @@ function flattenConditions({ ast, onChange }: FlattenerProps): Flattened {
       condition: (newAst: AST) =>
         onChange({
           ...ast,
-          condition: newAst
+          condition: newAst,
         }),
       then: (newAst: AST) =>
         onChange({
           ...ast,
-          then: newAst
+          then: newAst,
         }),
       else: (newAst: AST) =>
         onChange({
           ...ast,
-          else: newAst
-        })
+          else: newAst,
+        }),
     };
 
-
-    if(!ast.else){
+    if (!ast.else) {
       return {
-          pairs: [
+        pairs: [
           {
             condition: {
               ast: ast.condition,
-              onChange: handlers.condition
+              onChange: handlers.condition,
             },
             then: {
               ast: ast.then,
-              onChange: handlers.then
+              onChange: handlers.then,
             },
             original: {
               ast,
-              onChange
-            }
-          }
+              onChange,
+            },
+          },
         ],
-      }
+      };
     }
     const nested = flattenConditions({
       ast: ast.else,
-      onChange: handlers.else
+      onChange: handlers.else,
     });
 
     return {
@@ -716,20 +620,20 @@ function flattenConditions({ ast, onChange }: FlattenerProps): Flattened {
         {
           condition: {
             ast: ast.condition,
-            onChange: handlers.condition
+            onChange: handlers.condition,
           },
           then: {
             ast: ast.then,
-            onChange: handlers.then
+            onChange: handlers.then,
           },
           original: {
             ast,
-            onChange
-          }
+            onChange,
+          },
         },
-        ...nested.pairs
+        ...nested.pairs,
       ],
-      finalElse: nested.finalElse
+      finalElse: nested.finalElse,
     };
   }
 
@@ -737,16 +641,16 @@ function flattenConditions({ ast, onChange }: FlattenerProps): Flattened {
     pairs: [],
     finalElse: {
       ast,
-      onChange
-    }
+      onChange,
+    },
   };
 }
 
 function VariableEditor({
   ast,
   onChange,
-  cols = "5"
-}: NodeEditorProps<VariableNode>): JSX.Element {
+  cols = "5",
+}: NodeEditorProps<VariableNode>): ReactNode {
   const { theme, boundVariables = [] } = Context.useContainer();
   return (
     <theme.VariableEditor
@@ -760,8 +664,8 @@ function VariableEditor({
 
 function ConditionEditor({
   ast,
-  onChange
-}: NodeEditorProps<ConditionNode>): JSX.Element {
+  onChange,
+}: NodeEditorProps<ConditionNode>): ReactNode {
   const { theme, defaultProvider } = Context.useContainer();
 
   const flattened = flattenConditions({ ast, onChange });
@@ -770,43 +674,41 @@ function ConditionEditor({
     // Make the second-to-last condition's else = final else
     if (pairs.length <= 1) return; // Can't flatten a single-level condition
     const secondLast = pairs[pairs.length - 2].original;
-    if(flattened.finalElse){
+    if (flattened.finalElse) {
       secondLast.onChange({
         ...secondLast.ast,
-        else: flattened.finalElse.ast
+        else: flattened.finalElse.ast,
       });
     } else {
       secondLast.onChange({
-        ...secondLast.ast
+        ...secondLast.ast,
       });
-    } 
+    }
   };
   const addNew = () => {
     const last = pairs[pairs.length - 1].original;
-    if(flattened.finalElse){
-    last.onChange({
-      ...last.ast,
-      else: {
-        ...defaultProvider.defaultCondition(),
-        else: flattened.finalElse.ast
-      }
-    });
+    if (flattened.finalElse) {
+      last.onChange({
+        ...last.ast,
+        else: {
+          ...defaultProvider.defaultCondition(),
+          else: flattened.finalElse.ast,
+        },
+      });
     } else {
       last.onChange({
         ...last.ast,
         else: {
-          ...defaultProvider.defaultCondition()
-        }
+          ...defaultProvider.defaultCondition(),
+        },
       });
     }
   };
 
   const removeAst = (ast: ConditionNode, onChange: OnChange) =>
-    ast.else ? 
-      onChange(ast.else)
-      : onChange(null)
+    ast.else ? onChange(ast.else) : onChange(null);
 
-  const children = flattened.pairs.map(pair => {
+  const children = flattened.pairs.map((pair) => {
     const Then = <NodeEditor {...pair.then} cols="12" />;
     const Condition = <NodeEditor {...pair.condition} cols="12" />;
     const remove = () => removeAst(pair.original.ast, pair.original.onChange);
@@ -815,19 +717,20 @@ function ConditionEditor({
       Condition,
       remove,
       ast: pair.original.ast,
-      onChange: pair.original.onChange
+      onChange: pair.original.onChange,
     };
   });
 
-  if(!flattened.finalElse){
+  if (!flattened.finalElse) {
     return (
       <theme.ConditionEditor
-      ast={ast}
-      onChange={onChange}
-      children={children}
-      addNew={addNew}
-      removeLast={removeLast}
-      />);
+        ast={ast}
+        onChange={onChange}
+        children={children}
+        addNew={addNew}
+        removeLast={removeLast}
+      />
+    );
   } else {
     const elseEditor = <NodeEditor {...flattened.finalElse} cols="6" />;
     return (
@@ -838,61 +741,64 @@ function ConditionEditor({
         elseEditor={elseEditor}
         addNew={addNew}
         removeLast={removeLast}
-      />);
-    }
+      />
+    );
   }
+}
 
-function BindEditor({ ast, onChange }: NodeEditorProps<BindNode>): JSX.Element {
+function BindEditor({ ast, onChange }: NodeEditorProps<BindNode>): ReactNode {
   const { theme } = Context.useContainer();
 
   const lhsProps = {
     ast: ast.lhs,
-    onChange: (newAst: VariableNode) => onChange({ ...ast, lhs: newAst } as BindNode)
-  }
+    onChange: (newAst: VariableNode) =>
+      onChange({ ...ast, lhs: newAst } as BindNode),
+  };
   const rhsProps = {
     ast: ast.rhs,
-    onChange: (newAst: AST) => onChange({ ...ast, rhs: newAst } as BindNode)
-  }
-  const lhs = (
-    <NodeEditor
-      {...lhsProps}
-    />
-  );
-  const rhs = (
-    <NodeEditor
-      {...rhsProps}
-    />
-  );
+    onChange: (newAst: AST) => onChange({ ...ast, rhs: newAst } as BindNode),
+  };
+  const lhs = <NodeEditor {...lhsProps} />;
+  const rhs = <NodeEditor {...rhsProps} />;
 
-  return <theme.BindEditor ast={ast} onChange={onChange} lhs={lhs} rhs={rhs} rhsProps={rhsProps} lhsProps={lhsProps} />;
+  return (
+    <theme.BindEditor
+      ast={ast}
+      onChange={onChange}
+      lhs={lhs}
+      rhs={rhs}
+      rhsProps={rhsProps}
+      lhsProps={lhsProps}
+    />
+  );
 }
 
 function ObjectUnaryEditor({
   ast,
-  onChange
-}: NodeEditorProps<ObjectUnaryNode>): JSX.Element {
+  onChange,
+}: NodeEditorProps<ObjectUnaryNode>): ReactNode {
   const { theme, defaultProvider } = Context.useContainer();
 
   const removeLast = () => {
     onChange({
       ...ast,
-      lhs: ast.lhs.slice(0, -1)
+      lhs: ast.lhs.slice(0, -1),
     } as ObjectUnaryNode);
   };
   const addNew = () => {
     const newPair = [
       defaultProvider.defaultString(),
-      defaultProvider.defaultComparison()
+      defaultProvider.defaultComparison(),
     ];
     onChange({
       ...ast,
-      lhs: [...ast.lhs, newPair]
+      lhs: [...ast.lhs, newPair],
     } as ObjectUnaryNode);
   };
   const removeIndex = (idx: number) =>
     onChange({
       ...ast,
-      lhs: ast.lhs.filter((_, i) => i !== idx)
+      lhs: ast.lhs.filter((_, i) => i !== idx),
     } as ObjectUnaryNode);
 
   const children = ast.lhs.map((pair: [AST, AST], idx: number) => {
@@ -903,18 +809,18 @@ function ObjectUnaryEditor({
       newLhs[idx] = newPair;
       onChange({
         ...ast,
-        lhs: newLhs
+        lhs: newLhs,
       } as AST);
     };
-    const changeKey = newAst => changePair(newAst, 0);
-    const changeValue = newAst => changePair(newAst, 1);
+    const changeKey = (newAst) => changePair(newAst, 0);
+    const changeValue = (newAst) => changePair(newAst, 1);
     const keyProps = {
       ast: pair[0],
-      onChange: changeKey
+      onChange: changeKey,
     };
     const valueProps = {
       ast: pair[1],
-      onChange: changeValue
+      onChange: changeValue,
     };
     const key = <NodeEditor {...keyProps} cols="12" />;
     const value = <NodeEditor {...valueProps} cols="12" />;
@@ -940,20 +846,20 @@ function withoutIndex<T>(arr: T[], idx: number) {
 
 function ArrayUnaryEditor({
   ast,
-  onChange
-}: NodeEditorProps<ArrayUnaryNode>): JSX.Element {
+  onChange,
+}: NodeEditorProps<ArrayUnaryNode>): ReactNode {
   const { theme, defaultProvider } = Context.useContainer();
 
   const removeLast = () => {
     onChange({
       ...ast,
-      expressions: ast.expressions.slice(0, -1)
+      expressions: ast.expressions.slice(0, -1),
     });
   };
   const addNew = () => {
     onChange({
       ...ast,
-      expressions: [...ast.expressions, defaultProvider.defaultComparison()]
+      expressions: [...ast.expressions, defaultProvider.defaultComparison()],
     });
   };
   const children = ast.expressions.map((expr: AST, idx: number) => {
@@ -962,13 +868,13 @@ function ArrayUnaryEditor({
       newExpr[idx] = newAst;
       onChange({
         ...ast,
-        expressions: newExpr
+        expressions: newExpr,
       });
     };
     const editor = (
       <NodeEditor
         ast={expr}
-        onChange={newAst => changePair(newAst)}
+        onChange={(newAst) => changePair(newAst)}
         cols="12"
       />
     );
@@ -976,7 +882,7 @@ function ArrayUnaryEditor({
       const newExpr: AST[] = withoutIndex(ast.expressions, idx);
       onChange({
         ...ast,
-        expressions: newExpr
+        expressions: newExpr,
       });
     };
     return { editor, remove, ast: expr, onChange: changePair };
@@ -993,16 +899,16 @@ function ArrayUnaryEditor({
   );
 }
 
-function ApplyEditor(props: NodeEditorProps<ApplyNode>): JSX.Element {
+function ApplyEditor(props: NodeEditorProps<ApplyNode>): ReactNode {
   const { theme } = Context.useContainer();
   const { baseLeft, chain } = flattenApply(props.ast, props.onChange);
   const lhs = <NodeEditor {...baseLeft} />;
-  const childNodes = chain.map(c => ({
+  const childNodes = chain.map((c) => ({
     editor: <NodeEditor ast={c.ast} onChange={c.onChange} />,
     ast: c.ast,
-    onChange: c.onChange
+    onChange: c.onChange,
   }));
-  const children = childNodes.map(c => c.editor);
+  const children = childNodes.map((c) => c.editor);
   return (
     <theme.ApplyEditor
       ast={props.ast}
@@ -1023,53 +929,53 @@ function flattenApply(ast: ApplyNode, onChange: OnChange): FlattenResult {
   if (ast.type === "apply") {
     const right = {
       ast: ast.rhs,
-      onChange: newAst => {
+      onChange: (newAst) => {
         onChange({
           ...ast,
-          rhs: newAst
+          rhs: newAst,
         });
-      }
+      },
     };
     if (ast.lhs.type === "apply") {
-      const child = flattenApply(ast.lhs, newAst => {
+      const child = flattenApply(ast.lhs, (newAst) => {
         onChange({
           ...ast,
-          lhs: newAst
+          lhs: newAst,
         });
       });
       return {
         baseLeft: child.baseLeft,
-        chain: [...child.chain, right]
+        chain: [...child.chain, right],
       };
     } else {
       return {
         baseLeft: {
           ast: ast.lhs,
-          onChange: newAst => {
+          onChange: (newAst) => {
             onChange({
               ...ast,
-              lhs: newAst
+              lhs: newAst,
             });
-          }
+          },
         },
-        chain: [right]
+        chain: [right],
       };
     }
   } else {
     return {
       baseLeft: {
         ast,
-        onChange
+        onChange,
       },
-      chain: []
+      chain: [],
     };
   }
 }
 
 function FunctionEditor({
   ast,
-  onChange
-}: NodeEditorProps<FunctionNode>): JSX.Element {
+  onChange,
+}: NodeEditorProps<FunctionNode>): ReactNode {
   const { theme } = Context.useContainer();
   const argumentNodes = ast.arguments.map((a, idx) => {
     const changeArg = (newAst: AST) => {
@@ -1078,23 +984,23 @@ function FunctionEditor({
       onChange({
         ...ast,
         // @ts-ignore -- something funky going on here with array types.
-        arguments: newArgs
+        arguments: newArgs,
       } as FunctionNode);
     };
     return {
       editor: <NodeEditor ast={a} onChange={changeArg} />,
       ast: a,
-      onChange: changeArg
+      onChange: changeArg,
     };
   });
-  const args = argumentNodes.map(c => c.editor);
+  const args = argumentNodes.map((c) => c.editor);
   const changeProcedure = (value: string) =>
     onChange({
       ...ast,
       procedure: {
         ...ast.procedure,
-        value
-      }
+        value,
+      },
     });
   return (
     <theme.FunctionEditor
@@ -1107,20 +1013,22 @@ function FunctionEditor({
   );
 }
 
-function MathEditor(props: NodeEditorProps<BinaryNode>): JSX.Element {
+function MathEditor(props: NodeEditorProps<BinaryNode>): ReactNode {
   const { theme, defaultProvider } = Context.useContainer();
   const [text, setText] = useState(serializer(props.ast));
   const [parsing, setParsing] = useState<ParsingState>({
     inProgress: false,
   });
-  const changeType = () => { props.onChange(nextAst(props.ast, defaultProvider)) };
+  const changeType = () => {
+    props.onChange(nextAst(props.ast, defaultProvider));
+  };
   const parts = flattenMathParts(props.ast, props.onChange);
 
   function onChangeText(newText: string) {
     let error: string | undefined = undefined;
     setParsing({
       inProgress: true,
-      error
+      error,
     });
     try {
       const newAst = jsonata(newText).ast() as AST;
@@ -1131,27 +1039,31 @@ function MathEditor(props: NodeEditorProps<BinaryNode>): JSX.Element {
     } catch (e) {
       error = "Parsing Error: " + e.message;
     } finally {
-     setParsing({
-       inProgress: false,
-       error
-     });
-     setText(newText);
+      setParsing({
+        inProgress: false,
+        error,
+      });
+      setText(newText);
     }
   }
 
   return (
-    <theme.MathEditor 
-      text={text} 
+    <theme.MathEditor
+      text={text}
       children={parts}
-      textChange={onChangeText} 
-      parsing={parsing} 
+      textChange={onChangeText}
+      parsing={parsing}
       changeType={changeType}
       {...props}
     />
   );
 }
 
-function flattenMathParts(ast: AST, onChange: OnChange, collectedParts: MathPart[] = []): MathPart[] {
+function flattenMathParts(
+  ast: AST,
+  onChange: OnChange,
+  collectedParts: MathPart[] = []
+): MathPart[] {
   function onChangeOperator(newOperator: string) {
     if (Object.keys(Consts.mathOperators).includes(newOperator)) {
       onChange({ ...ast, value: newOperator } as BinaryNode);
@@ -1162,28 +1074,27 @@ function flattenMathParts(ast: AST, onChange: OnChange, collectedParts: MathPart
 
   if (isMath(ast)) {
     flattenMathParts(
-      ast.lhs, 
-      (newAst: AST) => onChange({ ...ast, lhs: newAst }), 
+      ast.lhs,
+      (newAst: AST) => onChange({ ...ast, lhs: newAst }),
       collectedParts
     );
     collectedParts.push({
-     type: "operator",
-     operator: ast.value,
-     onChangeOperator
+      type: "operator",
+      operator: ast.value,
+      onChangeOperator,
     });
     flattenMathParts(
-      ast.rhs, 
-      (newAst: AST) => onChange({ ...ast, rhs: newAst }), 
+      ast.rhs,
+      (newAst: AST) => onChange({ ...ast, rhs: newAst }),
       collectedParts
     );
   } else {
     collectedParts.push({
       type: "ast",
       ast,
-      onChange, 
-      editor: <NodeEditor ast={ast} onChange={onChange} />
+      onChange,
+      editor: <NodeEditor ast={ast} onChange={onChange} />,
     });
   }
   return collectedParts;
 }
-
